@@ -8,7 +8,6 @@ import com.avnzor.oms_backend.auth.repository.WarehouseWorkerRepository;
 import com.avnzor.oms_backend.auth.security.WarehouseUserPrincipal;
 import com.avnzor.oms_backend.common.exception.UnauthorizedException;
 import com.avnzor.oms_backend.tenants.context.TenantContextHolder;
-import com.avnzor.oms_backend.tenants.context.TenantContextHolder;
 import com.avnzor.oms_backend.tenants.resolver.TenantResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,31 +25,27 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
-        try {
-            tenantResolver.resolveForLogin(request.tenantSlug());
+        tenantResolver.resolveForLogin(request.tenantSlug());
 
-            WarehouseWorker worker = warehouseWorkerRepository.findByUsername(request.username())
-                    .orElseThrow(() -> new UnauthorizedException("Invalid username or password"));
+        WarehouseWorker worker = warehouseWorkerRepository.findByUsername(request.username())
+                .orElseThrow(() -> new UnauthorizedException("Invalid username or password"));
 
-            if (!passwordMatches(request.password(), worker.getPassword())) {
-                throw new UnauthorizedException("Invalid username or password");
-            }
-
-            Long tenantId = TenantContextHolder.getTenantId();
-            String tenantSlug = TenantContextHolder.getTenantSlug();
-
-            WarehouseUserPrincipal principal = new WarehouseUserPrincipal(worker, tenantId, tenantSlug);
-            String accessToken = jwtService.generateTenantToken(principal);
-
-            return new LoginResponse(
-                    accessToken,
-                    "Bearer",
-                    jwtService.getExpirationSeconds(),
-                    toUserResponse(worker, tenantId, tenantSlug)
-            );
-        } finally {
-            TenantContextHolder.clear();
+        if (!passwordMatches(request.password(), worker.getPassword())) {
+            throw new UnauthorizedException("Invalid username or password");
         }
+
+        Long tenantId = TenantContextHolder.getTenantId();
+        String tenantSlug = TenantContextHolder.getTenantSlug();
+
+        WarehouseUserPrincipal principal = new WarehouseUserPrincipal(worker, tenantId, tenantSlug);
+        String accessToken = jwtService.generateTenantToken(principal);
+
+        return new LoginResponse(
+                accessToken,
+                "Bearer",
+                jwtService.getExpirationSeconds(),
+                toUserResponse(worker, tenantId, tenantSlug)
+        );
     }
 
     private boolean passwordMatches(String rawPassword, String storedPassword) {

@@ -37,7 +37,7 @@ public class AuditLogService {
         }
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public AuditLog log(AuditLogEntry entry) {
         return persist(entry);
     }
