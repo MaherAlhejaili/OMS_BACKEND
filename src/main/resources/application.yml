@@ -3,7 +3,7 @@ spring:
     name: avnzor-oms
 
   profiles:
-    # Local development defaults to the dev profile; override via SPRING_PROFILES_ACTIVE.
+    # Local development defaults to dev; servers set SPRING_PROFILES_ACTIVE=staging|prod.
     active: dev
 
   datasource:
@@ -13,6 +13,7 @@ spring:
     hibernate:
       # Schema is managed by Flyway; Hibernate only validates entity mappings at startup.
       ddl-auto: validate
+    open-in-view: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
@@ -20,18 +21,24 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
-    # Adopt Flyway on a database that already has tables without re-running historical DDL.
     baseline-on-migrate: true
-    # Treat the current production schema as version 1; new scripts start at V2__.
     baseline-version: 1
     baseline-description: Existing production schema before Flyway adoption
     validate-on-migrate: true
     validate-migration-naming: true
-    # Never allow flyway clean against shared or production databases.
     clean-disabled: true
 
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when_authorized
 
 logging:
   level:
@@ -40,5 +47,13 @@ logging:
 
 app:
   jwt:
+    # Dev-only defaults; staging and prod require JWT_SECRET and JWT_EXPIRATION env vars.
     secret: ${JWT_SECRET:change-me-use-at-least-32-characters-for-hs256}
-    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+    expiration-ms: ${JWT_EXPIRATION:86400000}
+
+  # Runtime settings for external providers and integrations (override per environment via env vars).
+  integrations:
+    tracking-api-url: ${TRACKING_API_URL:}
+    shipping-provider-url: ${SHIPPING_PROVIDER_URL:}
+    shipping-provider-api-key: ${SHIPPING_PROVIDER_API_KEY:}
+    notification-webhook-url: ${NOTIFICATION_WEBHOOK_URL:}

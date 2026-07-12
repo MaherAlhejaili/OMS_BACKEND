@@ -31,3 +31,10 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Environment files (never commit secrets) ###
+.env
+.env.*
+!.env.example
+deploy/config/*.env
+!deploy/config/*.env.example

@@ -1,0 +1,21 @@
+[Unit]
+Description=Avnzor OMS Backend
+After=network.target
+
+[Service]
+Type=simple
+User=avnzor
+Group=avnzor
+WorkingDirectory=/opt/avnzor/app
+EnvironmentFile=/opt/avnzor/config/application.env
+ExecStart=/usr/bin/java -jar /opt/avnzor/app/oms-backend.jar
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=10
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
