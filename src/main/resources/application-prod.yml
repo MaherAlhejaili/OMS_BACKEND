@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    # Production credentials and endpoints are supplied entirely via environment variables.
+    url: jdbc:mysql://${DATABASE_HOST}:${DATABASE_PORT:3306}/${DATABASE_NAME}?useSSL=true&requireSSL=true&serverTimezone=UTC
+    username: ${DATABASE_USER}
+    password: ${DATABASE_PASSWORD}
+
+logging:
+  level:
+    root: WARN
+    com.avnzor: INFO
