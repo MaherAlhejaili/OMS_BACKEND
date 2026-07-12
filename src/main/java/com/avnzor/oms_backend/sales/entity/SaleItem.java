@@ -41,8 +41,14 @@ public class SaleItem {
     @Column(name = "product_type")
     private String productType;
 
+    @Column(name = "option_id")
+    private Integer optionId;
+
     @Column(name = "net_cost", precision = 6, scale = 2)
     private BigDecimal netCost;
+
+    @Column(name = "real_cost", precision = 6, scale = 2)
+    private BigDecimal realCost;
 
     @Column(name = "net_unit_price", precision = 6, scale = 2)
     private BigDecimal netUnitPrice;
@@ -74,8 +80,26 @@ public class SaleItem {
     @Column(precision = 25, scale = 4)
     private BigDecimal subtotal;
 
+    @Column(name = "serial_no")
+    private String serialNo;
+
+    @Column
+    private LocalDate expiry;
+
+    @Column(name = "batch_no")
+    private String batchNo;
+
+    @Column(name = "serial_number")
+    private String serialNumber;
+
+    @Column(name = "lot_no")
+    private String lotNo;
+
     @Column(name = "real_unit_price", precision = 25, scale = 4)
     private BigDecimal realUnitPrice;
+
+    @Column(name = "sale_item_id")
+    private Integer saleItemId;
 
     @Column(name = "product_unit_id")
     private Integer productUnitId;
@@ -86,14 +110,32 @@ public class SaleItem {
     @Column(name = "unit_quantity", precision = 15, scale = 4)
     private BigDecimal unitQuantity;
 
-    @Column(name = "serial_no")
-    private String serialNo;
+    @Column
+    private String comment;
+
+    @Column(precision = 25, scale = 4)
+    private BigDecimal gst;
+
+    @Column(precision = 25, scale = 4)
+    private BigDecimal cgst;
+
+    @Column(precision = 25, scale = 4)
+    private BigDecimal sgst;
+
+    @Column(precision = 25, scale = 4)
+    private BigDecimal igst;
+
+    @Column(precision = 25, scale = 4)
+    private BigDecimal subtotal2;
 
     @Column
-    private LocalDate expiry;
+    private Boolean bonus;
 
-    @Column(name = "serial_number")
-    private String serialNumber;
+    @Column(length = 55)
+    private String discount1;
+
+    @Column(length = 55)
+    private String discount2;
 
     @Column(precision = 24, scale = 4)
     private BigDecimal totalbeforevat;
@@ -104,9 +146,24 @@ public class SaleItem {
     @Column(name = "avz_item_code", length = 50)
     private String avzItemCode;
 
+    @Column(name = "second_discount_value", precision = 25, scale = 4)
+    private BigDecimal secondDiscountValue;
+
+    @Column(length = 55)
+    private String discount3;
+
+    @Column(name = "third_discount_value", precision = 25, scale = 4)
+    private BigDecimal thirdDiscountValue;
+
+    @Column(name = "ordered_quantity", precision = 6, scale = 2)
+    private BigDecimal orderedQuantity;
+
     @Column(name = "is_active")
     private Boolean active;
 
     @Column(name = "is_reserved")
     private Boolean reserved;
+
+    @Column(name = "is_external")
+    private Boolean external;
 }

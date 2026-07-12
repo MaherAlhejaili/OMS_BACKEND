@@ -12,6 +12,7 @@ public record SaleSummaryResponse(
         String shippingFirstName,
         String shippingLastName,
         String customer,
+        String customerEmail,
         String shippingPhone,
         LocalDateTime date,
         String jobType,

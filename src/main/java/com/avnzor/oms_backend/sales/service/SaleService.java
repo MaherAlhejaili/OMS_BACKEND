@@ -227,6 +227,7 @@ public class SaleService {
                 .toList();
 
         String shippingPhone = saleRelatedDataSupport.resolveShippingPhone(sale, customer);
+        String customerEmail = saleRelatedDataSupport.resolveCustomerEmail(sale, customer);
         return new SaleDetailResponse(
                 sale.getId(),
                 saleRelatedDataSupport.resolveShopifySaleId(sale),
@@ -234,6 +235,7 @@ public class SaleService {
                 sale.getShippingFirstName(),
                 sale.getShippingLastName(),
                 saleRelatedDataSupport.resolveCustomerName(sale, customer),
+                customerEmail,
                 shippingPhone == null ? "N/A" : shippingPhone,
                 sale.getDate(),
                 sale.getJobType() == null ? "" : sale.getJobType(),
@@ -380,6 +382,7 @@ public class SaleService {
         }
 
         String phone = saleRelatedDataSupport.resolveShippingPhone(sale, customer);
+        String customerEmail = saleRelatedDataSupport.resolveCustomerEmail(sale, customer);
         return new SaleSummaryResponse(
                 sale.getId(),
                 shopifySaleId,
@@ -389,6 +392,7 @@ public class SaleService {
                 sale.getShippingFirstName(),
                 sale.getShippingLastName(),
                 saleRelatedDataSupport.resolveCustomerName(sale, customer),
+                customerEmail,
                 phone == null ? "N/A" : phone,
                 sale.getDate(),
                 sale.getJobType() == null ? "" : sale.getJobType(),

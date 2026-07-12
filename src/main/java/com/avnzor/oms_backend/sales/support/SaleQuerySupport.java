@@ -46,6 +46,7 @@ public class SaleQuerySupport {
             sale.setId(rs.getInt("id"));
             sale.setReferenceNo(rs.getString("reference_no"));
             sale.setCustomer(rs.getString("customer"));
+            sale.setCustomerEmail(rs.getString("customer_email"));
             sale.setShippingFirstName(rs.getString("shipping_first_name"));
             sale.setShippingLastName(rs.getString("shipping_last_name"));
             sale.setShippingPhone(rs.getString("shipping_phone"));
@@ -81,6 +82,7 @@ public class SaleQuerySupport {
         sale.setId(rs.getInt("id"));
         sale.setReferenceNo(rs.getString("reference_no"));
         sale.setCustomer(rs.getString("customer"));
+        sale.setCustomerEmail(rs.getString("customer_email"));
         sale.setCustomerId(rs.getObject("customer_id") == null ? null : rs.getInt("customer_id"));
         sale.setAddressId(rs.getObject("address_id") == null ? null : rs.getInt("address_id"));
         sale.setShippingFirstName(rs.getString("shipping_first_name"));
@@ -162,6 +164,7 @@ public class SaleQuerySupport {
             StringBuilder searchClause = new StringBuilder("""
                     (
                       s.customer LIKE ?
+                      OR s.customer_email LIKE ?
                       OR s.shipping_name LIKE ?
                       OR s.shipping_phone LIKE ?
                       OR s.reference_no LIKE ?
@@ -171,6 +174,7 @@ public class SaleQuerySupport {
                           AND TRIM(LEADING '0' FROM si.product_code) = ?
                       )
                     """);
+            params.add(term);
             params.add(term);
             params.add(term);
             params.add(term);

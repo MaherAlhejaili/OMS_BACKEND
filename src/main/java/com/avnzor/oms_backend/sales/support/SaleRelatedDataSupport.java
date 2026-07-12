@@ -281,6 +281,13 @@ public class SaleRelatedDataSupport {
         }).orElse(sale.getCustomer() == null ? "N/A" : sale.getCustomer());
     }
 
+    public String resolveCustomerEmail(Sale sale, Optional<Company> customer) {
+        if (sale.getCustomerEmail() != null && !sale.getCustomerEmail().isBlank()) {
+            return sale.getCustomerEmail();
+        }
+        return customer.map(Company::getEmail).orElse(null);
+    }
+
     private Map<String, String> loadTrackingStatusesFromRows(List<Map<String, Object>> rows) {
         Set<String> trackingIds = rows.stream()
                 .map(row -> row.get("tracking_id"))
