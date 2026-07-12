@@ -193,6 +193,9 @@
                     <locations>
                         <location>filesystem:src/main/resources/db/migration</location>
                     </locations>
+                    <baselineVersion>1</baselineVersion>
+                    <baselineDescription>Existing production schema before Flyway adoption</baselineDescription>
+                    <ignoreMigrationPatterns>*:missing</ignoreMigrationPatterns>
                 </configuration>
             </plugin>
         </plugins>

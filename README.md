@@ -94,6 +94,7 @@ Server: **http://localhost:8080** — profile **`dev`**
 src/main/java/com/avnzor/oms_backend/
 ├── OmsBackendApplication.java
 ├── auth/                    # JWT login, security, warehouse users
+├── audit/                   # Global API audit logging (audit_log table)
 ├── orders/                  # Orders (Logistic team only) — placeholder
 ├── tracking/                # Tracking (all authenticated) — placeholder
 ├── common/
@@ -155,6 +156,43 @@ All endpoints return a unified `ApiResponse<T>`:
 
 ---
 
+## Audit logging
+
+Every request to `/api/**` is recorded automatically in the `audit_log` table (created by Flyway `V2__Create_audit_log.sql`). No controller changes are required for standard API traffic.
+
+| Column | Purpose |
+|---|---|
+| `event_type` | Always `API_REQUEST` for HTTP traffic; use `AuditLogService.log()` for domain events |
+| `entity_type` | API resource segment (e.g. `orders`, `auth`, `tracking`) |
+| `entity_id` | Path identifier when present (e.g. `/api/v1/orders/42` → `42`) |
+| `actor` | Authenticated username, or `anonymous` for public endpoints |
+| `tenant_id` | Reserved for future multi-tenancy |
+| `details` | JSON metadata: method, path, status code, duration, client IP, user id |
+| `created_at` | Request completion timestamp |
+
+**What is logged:** HTTP method, path, query string, response status, duration, client IP, and authenticated user (when present).
+
+**What is never logged:** Passwords, JWT tokens, or `Authorization` headers.
+
+Audit writes run **asynchronously** so they do not block API responses. Failures are logged to the application log only.
+
+### Programmatic audit events
+
+Inject `AuditLogService` in any service to record domain-specific actions (e.g. order created, return approved):
+
+```java
+auditLogService.log(new AuditLogEntry(
+    "ORDER_CREATED",
+    "orders",
+    orderId.toString(),
+    principal.getUsername(),
+    null,
+    Map.of("orderNumber", orderNumber)
+));
+```
+
+---
+
 ## Authentication and authorization
 
 Users are loaded from existing table **`sma_warehouse_users`**.
@@ -208,14 +246,34 @@ Swagger is **disabled** in the `prod` profile.
 
 ## Database and Flyway
 
-Connects to an **existing production database**. Flyway baseline treats current schema as **version 1**; new scripts start at **V2__**.
+Connects to an **existing production database**. Existing tables are recorded as **baseline version 1**; application-owned changes start at **V2__**.
+
+### One-time baseline (existing databases)
+
+Run **once per database** that already has tables but no `flyway_schema_history` (staging, production, or a fresh clone of prod):
+
+```powershell
+.\mvnw.cmd flyway:baseline
+.\mvnw.cmd flyway:migrate
+```
+
+This marks the current schema as version **1** without running any scripts. After that, the app only applies new migrations on startup.
+
+> Your local `avnzor` DB is already baselined (currently at V5). You do **not** need to run baseline again.
+
+### Ongoing migrations
+
+`baseline-on-migrate` is **disabled** — Flyway will not auto-baseline on startup. If `flyway_schema_history` is missing on a non-empty database, startup fails until you run `flyway:baseline` manually.
 
 ```bash
-# Add migration
-src/main/resources/db/migration/V3__Your_change.sql
+# Add a new migration (use next version number)
+src/main/resources/db/migration/V6__Your_change.sql
 
 # Repair checksum mismatch (Windows line endings)
-./mvnw flyway:repair
+.\mvnw.cmd flyway:repair
+
+# Check migration status
+.\mvnw.cmd flyway:info
 ```
 
 ---
@@ -321,7 +379,7 @@ See [FIXES.md](FIXES.md) for detailed issue history.
 - [ ] Full orders implementation (map existing tables)
 - [ ] Full tracking implementation
 - [ ] Returns module
-- [ ] Audit log entity and service
+- [x] Global audit logging for all `/api/**` requests
 - [ ] Multi-tenancy
 - [ ] BCrypt migration for legacy passwords
 - [ ] GitHub secrets + server provisioning

@@ -21,12 +21,16 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
-    baseline-on-migrate: true
+    # One-time baseline only — run `.\mvnw.cmd flyway:baseline` on existing DBs before first migrate.
+    # After flyway_schema_history exists, Flyway applies only new versioned scripts (V2+).
+    baseline-on-migrate: false
     baseline-version: 1
     baseline-description: Existing production schema before Flyway adoption
     validate-on-migrate: true
     validate-migration-naming: true
     clean-disabled: true
+    # Ignore applied migrations missing from this repo (e.g. test-only V3 on a dev DB).
+    ignore-migration-patterns: "*:missing"
 
 server:
   port: ${SERVER_PORT:8080}

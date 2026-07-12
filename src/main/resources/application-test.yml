@@ -7,6 +7,8 @@ spring:
 
   flyway:
     locations: classpath:db/migration,classpath:db/test-migration
+    # Empty test DBs migrate from scratch; no baseline needed.
+    baseline-on-migrate: false
 
   jpa:
     show-sql: false

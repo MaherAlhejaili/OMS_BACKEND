@@ -1,5 +1,6 @@
 package com.avnzor.oms_backend.auth.config;
 
+import com.avnzor.oms_backend.audit.filter.AuditLoggingFilter;
 import com.avnzor.oms_backend.auth.filter.JwtAuthenticationFilter;
 import com.avnzor.oms_backend.auth.security.SecurityProblemSupport;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -27,6 +28,7 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             JwtAuthenticationFilter jwtAuthenticationFilter,
+            AuditLoggingFilter auditLoggingFilter,
             SecurityProblemSupport securityProblemSupport
     ) throws Exception {
         return http
@@ -47,6 +49,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(auditLoggingFilter, JwtAuthenticationFilter.class)
                 .build();
     }
 

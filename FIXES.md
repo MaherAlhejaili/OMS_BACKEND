@@ -21,6 +21,10 @@ Record of issues encountered during initial project setup and their resolutions.
 | Checksum mismatch on `V2__Create_audit_log.sql` | Git CRLF/LF line-ending changes on Windows after migration was applied | Run `.\mvnw.cmd flyway:repair`; added `.gitattributes` rules for `*.sql` and `*.yml` to enforce LF |
 | Need CLI repair tool | No Flyway Maven plugin | Added `flyway-maven-plugin` to `pom.xml` |
 | Schema version 3 newer than repo migration 2 | DB has a V3 history entry not present in `src/main/resources/db/migration/` | Harmless warning at startup; do not add conflicting V3 to main migrations without coordinating DB state |
+| Adopting Flyway on existing DB | Tables exist but no `flyway_schema_history` | Run `.\mvnw.cmd flyway:baseline` once, then `flyway:migrate`; `baseline-on-migrate` is disabled after adoption |
+| `Schema validation: missing table [audit_log]` | `flyway_schema_history` is at version 3 but `audit_log` was never created (V2 skipped) | Added `V4__Ensure_audit_log.sql` with `CREATE TABLE IF NOT EXISTS`; restart app or run `.\mvnw.cmd flyway:migrate` |
+| `wrong column type ... details ... longtext ... expecting json` | MySQL 5.5 stores `JSON` columns as `LONGTEXT`; Hibernate `SqlTypes.JSON` validation fails | `AuditLog.details` uses `JsonMapConverter` + `LONGVARCHAR`; `V5__Audit_log_details_longtext.sql` normalizes the column |
+| `Detected applied migration not resolved locally: 3` | Test-only `V3__Create_warehouse_users.sql` was applied to the dev `avnzor` DB | Added `spring.flyway.ignore-migration-patterns: "*:missing"` in `application.yml` |
 
 ---
 

@@ -22,7 +22,7 @@ Essential context for continuing development after a fresh session. Read this be
 - Connects to an **existing MySQL database** — schema already exists with production tables.
 - **Never** use `ddl-auto: update` or `create`. Always `validate`.
 - **Never** add Flyway migrations that recreate existing tables.
-- Flyway uses **baseline-on-migrate** — existing schema = version 1; new scripts start at **V2__**.
+- Flyway **baseline is manual, one-time only** (`baseline-on-migrate: false`). Run `flyway:baseline` on existing DBs once; after that only versioned scripts (V2+) are applied.
 - First application-owned migration: `V2__Create_audit_log.sql` (new table only).
 
 ### Auth source table
@@ -53,12 +53,13 @@ Entity: `auth/entity/WarehouseWorker.java`
 | Global `ApiResponse` wrapper | Implemented |
 | Global exception handling | Implemented |
 | Swagger UI (`/swagger-ui.html`) | Implemented (disabled in prod) |
-| Flyway baseline + V2 audit_log table | Implemented (entity not yet mapped) |
+| Flyway baseline + V2 audit_log table | Implemented |
+| Global API audit logging (`audit_log`) | Implemented |
 | Orders business logic | **Placeholder** controller |
 | Tracking business logic | **Placeholder** controller |
 | Multi-tenancy | **Not started** |
 | Returns module | **Not started** |
-| Audit log JPA entity/service | **Not started** |
+| Audit log JPA entity/service | **Implemented** — global filter on `/api/**` |
 | MapStruct mappers | **Not added** |
 | Docker image in CI/CD | Dockerfile exists; CD still deploys JAR via SSH |
 
@@ -136,7 +137,7 @@ Server layout: `/opt/avnzor/{app,config,logs,backups}` — see `deploy/README.md
 1. Full orders module (entities mapped to existing tables)
 2. Full tracking module
 3. Returns module
-4. Audit logging (entity + service for `audit_log` table)
+4. ~~Audit logging (entity + service for `audit_log` table)~~ — done (global API filter + `AuditLogService`)
 5. Multi-tenancy (`tenant_id` reserved in audit_log migration)
 6. BCrypt password migration for legacy users
 7. GitHub secrets + server provisioning
@@ -152,7 +153,9 @@ Server layout: `/opt/avnzor/{app,config,logs,backups}` — see `deploy/README.md
 | `auth/config/SecurityConfig.java` | Security rules |
 | `common/exception/GlobalExceptionHandler.java` | Error handling |
 | `common/config/GlobalResponseHandler.java` | Response wrapping |
-| `db/migration/V2__Create_audit_log.sql` | Only main migration so far |
+| `db/migration/V2__Create_audit_log.sql` | `audit_log` table schema |
+| `audit/filter/AuditLoggingFilter.java` | Global `/api/**` request audit |
+| `audit/service/AuditLogService.java` | Persist audit rows (async + sync) |
 | `.github/workflows/cd.yml` | Deployment pipeline |
 | `Dockerfile` | Container build |
 | `FIXES.md` | Past issues and solutions |
