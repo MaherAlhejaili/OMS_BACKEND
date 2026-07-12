@@ -1,6 +1,8 @@
 package com.avnzor.oms_backend.tenants.config;
 
 import com.avnzor.oms_backend.tenants.bootstrap.DevEnvironmentInitializer;
+import com.avnzor.oms_backend.tenants.bootstrap.TenantBootstrapContext;
+import com.avnzor.oms_backend.tenants.bootstrap.TenantBootstrapContributor;
 import com.avnzor.oms_backend.tenants.datasource.DataSourceManager;
 import com.avnzor.oms_backend.tenants.datasource.TenantRegistry;
 import com.avnzor.oms_backend.tenants.encryption.CredentialEncryptor;
@@ -15,6 +17,7 @@ import jakarta.persistence.EntityManagerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.jpa.EntityManagerFactoryBuilder;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -91,7 +94,8 @@ public class PlatformJpaConfig {
             CredentialEncryptor credentialEncryptor,
             PasswordEncoder passwordEncoder,
             Environment environment,
-            @Qualifier("platformDataSource") DataSource platformDataSource
+            @Qualifier("platformDataSource") DataSource platformDataSource,
+            ObjectProvider<TenantBootstrapContributor> bootstrapContributors
     ) {
         if (Arrays.asList(environment.getActiveProfiles()).contains("dev")) {
             DevEnvironmentInitializer devInitializer = new DevEnvironmentInitializer(
@@ -103,6 +107,17 @@ public class PlatformJpaConfig {
             );
             devInitializer.initializeIfNeeded();
         }
+
+        TenantBootstrapContext bootstrapContext = new TenantBootstrapContext(
+                tenantRepository,
+                platformUserRepository,
+                platformDataSource,
+                credentialEncryptor,
+                passwordEncoder,
+                environment
+        );
+        bootstrapContributors.orderedStream()
+                .forEach(contributor -> contributor.contribute(bootstrapContext));
 
         TenantRegistry registry = new TenantRegistry(
                 tenantRepository,

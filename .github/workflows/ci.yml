@@ -4,25 +4,14 @@ on:
   pull_request:
     branches:
       - master
+  push:
+    branches:
+      - master
 
 jobs:
   verify:
     name: Verify pull request
     runs-on: ubuntu-latest
-
-    services:
-      mysql:
-        image: mysql:8.4
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: avnzor_test
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h localhost -uroot -proot"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
 
     steps:
       - name: Checkout repository
@@ -42,7 +31,11 @@ jobs:
         run: ./mvnw clean verify
         env:
           SPRING_PROFILES_ACTIVE: test
-          DATABASE_HOST: 127.0.0.1
-          DATABASE_NAME: avnzor_test
-          DATABASE_USER: root
-          DATABASE_PASSWORD: root
+          TESTCONTAINERS_RYUK_DISABLED: true
+
+      - name: Upload JaCoCo coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: target/site/jacoco/

@@ -1,0 +1,29 @@
+spring:
+  sql:
+    init:
+      mode: never
+
+app:
+  datasource:
+    platform:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+
+  multi-tenancy:
+    encryption-key: test-encryption-key-32-characters-min
+    datasource-maximum-pool-size: 2
+    datasource-minimum-idle: 1
+
+  jwt:
+    secret: test-jwt-secret-at-least-32-characters-long
+    expiration-ms: 3600000
+
+test:
+  tenant:
+    slug: test-tenant
+    database-name: tenant_test
+    platform-database-name: oms_test
+
+logging:
+  level:
+    root: WARN
+    com.avnzor: INFO

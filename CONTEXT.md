@@ -61,6 +61,7 @@ Entity: `auth/entity/WarehouseWorker.java`
 | Returns module | **Not started** |
 | Audit log JPA entity/service | **Implemented** — global filter on `/api/**` |
 | MapStruct mappers | **Not added** |
+| Testing foundation (JUnit, Testcontainers, JaCoCo) | **Implemented** — see `TESTING.md` |
 | Docker image in CI/CD | Dockerfile exists; CD still deploys JAR via SSH |
 
 ---

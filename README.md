@@ -11,6 +11,7 @@ Order Management System backend for Avnzor. A modular Spring Boot application th
 | [README.md](README.md) | Developer guide — setup, usage, API, deployment overview |
 | [CONTEXT.md](CONTEXT.md) | Project context for future sessions — constraints, status, decisions |
 | [FIXES.md](FIXES.md) | Issues encountered and how they were resolved |
+| [TESTING.md](TESTING.md) | Testing strategy, TDD workflow, Testcontainers, JaCoCo |
 | [TOOLS.md](TOOLS.md) | Technologies and principles (brief reference) |
 | [deploy/README.md](deploy/README.md) | Server layout, systemd, GitHub secrets |
 
@@ -393,12 +394,25 @@ GitHub Environment secrets are **not yet configured** — deployment deferred un
 
 ---
 
+## Testing
+
+See [TESTING.md](TESTING.md) for the full strategy. Quick commands:
+
+```powershell
+.\mvnw.cmd test              # Unit tests only
+.\mvnw.cmd clean verify      # Unit + integration + JaCoCo report
+```
+
+Integration tests require **Docker Desktop** (Testcontainers). They use an isolated MySQL instance — not your local `oms` / `tenant_1` databases.
+
+---
+
 ## Common commands
 
 ```powershell
 .\mvnw.cmd spring-boot:run          # Start locally
-.\mvnw.cmd test                     # Run tests
-.\mvnw.cmd clean verify             # Full CI verification
+.\mvnw.cmd test                     # Unit tests
+.\mvnw.cmd clean verify            # Full test suite + coverage
 .\mvnw.cmd flyway:repair            # Fix Flyway checksum mismatch
 .\mvnw.cmd package -DskipTests       # Build JAR
 
