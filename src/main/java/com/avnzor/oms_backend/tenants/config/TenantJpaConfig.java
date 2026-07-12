@@ -1,7 +1,5 @@
 package com.avnzor.oms_backend.tenants.config;
 
-import com.avnzor.oms_backend.audit.entity.AuditLog;
-import com.avnzor.oms_backend.auth.entity.WarehouseWorker;
 import com.avnzor.oms_backend.tenants.datasource.DataSourceManager;
 import com.avnzor.oms_backend.tenants.datasource.TenantRoutingDataSource;
 import jakarta.persistence.EntityManagerFactory;
@@ -60,7 +58,13 @@ public class TenantJpaConfig {
 
         return builder
                 .dataSource(tenantRoutingDataSource)
-                .packages(WarehouseWorker.class, AuditLog.class)
+                .packages(
+                        "com.avnzor.oms_backend.auth.entity",
+                        "com.avnzor.oms_backend.audit.entity",
+                        "com.avnzor.oms_backend.purchases.entity",
+                        "com.avnzor.oms_backend.sales.entity",
+                        "com.avnzor.oms_backend.warehouse.entity"
+                )
                 .persistenceUnit("tenant")
                 .properties(properties)
                 .build();

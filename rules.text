@@ -1,0 +1,373 @@
+# Avnzor OMS Backend — Development Rules
+
+## General
+
+- Use Java 21.
+- Use Spring Boot 4.1 (aligned with the Spring Boot BOM in pom.xml).
+- Use Maven.
+- Follow RESTful API design.
+- Prefer readability over clever code.
+- Keep methods short and focused (aim for ~30 lines or fewer).
+- Write maintainable, production-quality code.
+- Generate code as if it will be maintained by a team of senior backend engineers for the next five years.
+- Prioritize simplicity, consistency, maintainability, and scalability over shortcuts.
+
+---
+
+## Architecture
+
+Use a Modular Monolith architecture.
+
+Each feature is its own module. Example modules:
+
+- auth
+- users
+- orders
+- returns
+- tracking
+- tenants
+- audit
+- common
+- config
+
+Do NOT organize the entire application by layer.
+
+Use Package by Feature:
+
+orders/
+  controller
+  service
+  repository
+  entity
+  dto
+  mapper
+  validation
+  exception
+
+Mirror the same structure under src/test/java when adding tests.
+
+---
+
+## Layering
+
+Always follow:
+
+Controller → Service → Repository → Database
+
+- Controllers must never access repositories directly.
+- Business logic belongs only inside services.
+- Repositories should only access the database.
+- Controllers should be thin: validate input, delegate to service, return DTOs.
+
+---
+
+## SOLID
+
+Always follow SOLID principles, especially:
+
+- Single Responsibility Principle — one reason to change per class.
+- Dependency Inversion Principle — depend on abstractions (interfaces) where appropriate.
+
+---
+
+## Dependency Injection
+
+- Always use constructor injection.
+- Use Lombok @RequiredArgsConstructor.
+- Never use field injection.
+- Do not use @Autowired on fields.
+
+---
+
+## DTOs
+
+- Never expose JPA entities through API responses.
+- Always use DTOs:
+  - Requests → Request DTO
+  - Responses → Response DTO
+- Use the global ApiResponse<T> wrapper for API responses.
+
+---
+
+## Mapping
+
+- Use MapStruct for entity-to-DTO mapping.
+- Never perform mapping inside controllers.
+- Keep mappers in each feature's mapper package.
+
+---
+
+## Validation
+
+- Use Jakarta Validation annotations on request DTOs.
+- Examples: @NotBlank, @NotNull, @Email, @Positive, @Size
+- Do not manually validate request objects inside controllers.
+- Let the global exception handler translate validation failures into consistent API errors.
+
+---
+
+## Exception Handling
+
+- Use one global exception handler (@RestControllerAdvice).
+- Create custom exceptions where appropriate.
+- Never return stack traces to clients.
+- Return proper HTTP status codes with consistent error bodies.
+
+---
+
+## Logging
+
+- Use SLF4J (log.info, log.warn, log.error).
+- Never use System.out.println().
+- Log important business events (login, order creation, return approval, tracking updates, tenant provisioning).
+- Do not log passwords, JWTs, DB credentials, or other sensitive information.
+
+---
+
+## Database
+
+- Use Spring Data JPA.
+- The database already exists — treat schema changes carefully.
+- Never modify schema automatically.
+- Always use:
+
+spring.jpa.hibernate.ddl-auto: validate
+
+- Do not use: update, create, or create-drop.
+
+---
+
+## Flyway
+
+Flyway is in use. Schema changes are managed exclusively through migrations.
+
+- Platform DB (oms): src/main/resources/db/platform-migration/
+- Tenant DBs (tenant_*): src/main/resources/db/tenant-migration/
+- Never recreate existing production tables.
+- Never add migrations that drop or alter legacy tables without explicit approval.
+- Do not generate migrations unless explicitly requested.
+- New application-owned tables only (e.g. audit_log on tenant DBs).
+- Default Spring Boot Flyway auto-config is disabled; migrations run via platform/tenant initializers.
+
+---
+
+## Multi-Tenancy
+
+- Keep all tenant logic inside the tenants module.
+- Do not mix tenant routing/resolution with business logic in other modules.
+- Architecture: database per tenant with dynamic datasource routing.
+- Platform DB holds tenant registry; each tenant DB holds business data (sma_warehouse_users, audit_log, etc.).
+- Tenant context is resolved per request (JWT + TenantContextHolder).
+- Tenant login requires tenantSlug in the login request.
+- Business modules must remain tenant-agnostic — they operate on the currently routed tenant datasource.
+
+---
+
+## Security
+
+- Authentication belongs inside the auth module.
+- Authorization uses Role-Based Access Control (RBAC) and department-based rules.
+- JWT authentication only — stateless, no server-side sessions.
+- Never place security logic inside controllers — use @PreAuthorize, security services, and filters.
+- Platform admin auth is separate from tenant auth (/api/v1/platform/** vs /api/v1/**).
+- Security tests are mandatory for new protected endpoints.
+
+---
+
+## Configuration
+
+- Global application configuration lives in the config package:
+  - SecurityConfig (or delegate to auth/config where feature-owned)
+  - OpenApiConfig
+  - JacksonConfig
+  - Tenant/platform datasource configuration
+- Feature-specific config may live inside its module when it only affects that feature.
+- Use Spring profiles: dev, staging, prod, test.
+- Secrets and environment-specific values go in profile YAML or environment variables — never hardcoded.
+
+---
+
+## REST API
+
+- Use nouns, not verbs.
+- Version all APIs under /api/v1/.
+- Platform APIs under /api/v1/platform/.
+
+Good:
+- GET /api/v1/orders
+- POST /api/v1/orders
+- GET /api/v1/orders/{id}
+- POST /api/v1/orders/{id}/returns
+
+Bad:
+- /createOrder
+- /deleteOrder
+- /getOrders
+
+- Return proper HTTP status codes.
+- Support pagination where listing endpoints are introduced.
+- Use a consistent ApiResponse structure across all endpoints.
+
+---
+
+## Naming
+
+Use meaningful, full names. Avoid abbreviations.
+
+Good: OrderService, TrackingService, ReturnRepository
+Bad: OrdSvc, TrkRepo
+
+Test naming:
+- Unit tests: FeatureServiceTest
+- Integration tests: FeatureControllerIT
+- Use descriptive @DisplayName with Given–When–Then where helpful.
+
+---
+
+## Code Style
+
+- Keep methods under approximately 30 lines whenever practical.
+- Extract reusable logic into private methods.
+- Avoid nested if statements — prefer early returns.
+- Avoid duplicated code.
+- Comments should explain why, not what — code should be self-explanatory.
+- Document complex business logic only where necessary.
+
+---
+
+## Responses
+
+- Use the consistent ApiResponse<T> wrapper.
+- Support pagination where appropriate (Page + response DTO).
+- Return proper HTTP status codes:
+  - 200 success
+  - 201 created
+  - 400 validation error
+  - 401 unauthenticated
+  - 403 forbidden
+  - 404 not found
+  - 409 conflict
+  - 500 unexpected server error (generic message to client)
+
+---
+
+## Testing
+
+### Framework
+
+Use the project testing stack:
+
+- JUnit 5
+- Mockito (via Spring Boot Test)
+- Spring Boot Test
+- MockMvc
+- Testcontainers (MySQL)
+- AssertJ
+- JaCoCo
+
+### Test types
+
+| Type              | Naming           | Command      | When to use                                                                 |
+|-------------------|------------------|--------------|-----------------------------------------------------------------------------|
+| Unit              | *Test.java       | mvn test     | Pure logic: services, utilities, security rules, JWT parsing. No Spring context. |
+| Integration       | *IT.java         | mvn verify   | Full Spring context, Testcontainers MySQL, multi-tenant routing, Flyway.    |
+| API / Controller  | *IT.java + MockMvc | mvn verify | HTTP contract, validation, status codes, response shape.                    |
+| Security          | *Test.java or *IT.java | Either | Unit-test rules; integration-test endpoint enforcement with JWT.            |
+| Repository        | *IT.java         | mvn verify   | Real SQL when queries go beyond simple CRUD.                                |
+| Multi-tenant      | *IT.java         | mvn verify   | Always extend AbstractIntegrationTest — never hit local dev DBs.            |
+
+### Principles
+
+- Write unit tests for business logic.
+- Write integration tests for controllers, security, and repositories.
+- Avoid mocking everything — prefer real integration tests over excessive mocking.
+- Mock external systems (shipping APIs, webhooks).
+- Do not mock your own database or security stack in integration tests.
+- Use Arrange–Act–Assert in test bodies.
+- Use Given–When–Then in test names and @DisplayName.
+- Shared test utilities live in src/test/java/.../support/.
+- Integration tests require Docker Desktop; they use isolated Testcontainers DBs (oms_test, tenant_test).
+
+### Coverage (JaCoCo)
+
+- Generated during mvn verify at target/site/jacoco/.
+- Do not target 100% coverage. Prioritize meaningful tests.
+
+| Layer        | Recommended minimum |
+|--------------|---------------------|
+| Services     | 70–80%              |
+| Controllers  | 60–70%              |
+| Repositories | 50–60%              |
+| Security     | 80%+                |
+| Utilities    | 80%+                |
+
+### Commands
+
+.\mvnw.cmd test              # Unit tests (fast, no Docker)
+.\mvnw.cmd clean verify      # Full suite + coverage
+
+---
+
+## Test-Driven Development (TDD)
+
+Follow TDD as much as practical for all new business features.
+
+### Workflow
+
+1. Write a failing test — define expected behavior first.
+2. Implement the minimum code to make it pass.
+3. Refactor while keeping tests green.
+4. Repeat.
+
+### When to start with which test
+
+| Layer                  | TDD starting point                                                      |
+|------------------------|-------------------------------------------------------------------------|
+| Service business rules | Unit test (*Test) — no @SpringBootTest                                  |
+| REST endpoints         | Integration test (*IT) with MockMvc — define JSON contract first        |
+| Security / RBAC        | Unit test for rule classes; *IT for endpoint enforcement                |
+| Repository queries     | *IT with Testcontainers when queries are non-trivial                    |
+| Multi-tenant behavior  | Always *IT extending AbstractIntegrationTest                            |
+
+### TDD rules
+
+- Do not implement new business logic without at least one failing test first.
+- Do not use @SpringBootTest for simple unit tests — it slows the TDD loop.
+- Run mvn test frequently during development (seconds, not minutes).
+- Run mvn clean verify before opening a PR.
+- A PR with new features but no tests should be considered incomplete.
+- Place tests in the same feature package as the code under test.
+- For API tests, extend AbstractMockMvcIntegrationTest.
+- For tenant-scoped features, use TestUserFactory and test-tenant test data.
+- For JWT-protected endpoints, use JwtTestSupport.bearerToken(...).
+- Red → Green → Refactor. Never skip the red phase.
+
+### TDD example flow (new feature)
+
+1. Create returns/controller/ReturnControllerIT.java → failing test for POST /returns
+2. Create minimal ReturnController + ReturnService → test passes
+3. Add validation test → failing
+4. Add @Valid on ReturnRequest → passes
+5. Refactor, extract shared logic → all green
+6. mvn clean verify before PR
+
+---
+
+## Documentation
+
+- Document complex business logic when code alone is not enough.
+- Do not add unnecessary comments.
+- Keep README.md, CONTEXT.md, TESTING.md, and FIXES.md updated when making significant architectural changes.
+- Do not create new markdown files unless explicitly requested.
+
+---
+
+## CI / Quality Gate
+
+Every push and PR to master must:
+
+1. Build the project (mvn clean verify)
+2. Pass all unit tests
+3. Pass all integration tests (Docker available in CI)
+4. Generate JaCoCo coverage report
+5. Fail the build if any test fails
