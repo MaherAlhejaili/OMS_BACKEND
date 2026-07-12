@@ -37,3 +37,8 @@ logging:
   level:
     root: INFO
     com.avnzor: INFO
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:change-me-use-at-least-32-characters-for-hs256}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
