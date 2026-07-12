@@ -321,10 +321,20 @@ Copy `deploy/config/application.env.example` as a starting point. **Do not commi
 | Workflow | Trigger | What it does |
 |---|---|---|
 | `ci.yml` | Pull requests | Build and test |
-| `cd.yml` | Push to `master` | Build, test, deploy to **staging** |
-| `cd.yml` | Manual run | Build, test, deploy to **production** (requires approval) |
+| `cd.yml` | Push to `master` | Build → test → deploy **staging** |
+| `cd.yml` | Manual run | Build → test → deploy **staging** → deploy **production** (requires approval) |
 
-### Deployment model
+### Deployment pipeline
+
+```
+Push to master:
+  Build and test → Deploy to staging
+
+Manual production release:
+  Build and test → Deploy to staging → Deploy to production (approval required)
+```
+
+Production always runs **after** staging succeeds. On a normal push, production is skipped.
 
 - Staging and production run the **same JAR artifact**.
 - Only environment variables and Spring profile differ.
