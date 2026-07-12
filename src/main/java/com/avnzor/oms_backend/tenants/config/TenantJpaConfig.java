@@ -22,7 +22,13 @@ import java.util.Map;
 @EnableJpaRepositories(
         basePackages = {
                 "com.avnzor.oms_backend.auth.repository",
-                "com.avnzor.oms_backend.audit.repository"
+                "com.avnzor.oms_backend.audit.repository",
+                "com.avnzor.oms_backend.sales.repository",
+                "com.avnzor.oms_backend.products.repository",
+                "com.avnzor.oms_backend.customers.repository",
+                "com.avnzor.oms_backend.shipping.repository",
+                "com.avnzor.oms_backend.suppliers.repository",
+                "com.avnzor.oms_backend.employees.repository"
         },
         entityManagerFactoryRef = "tenantEntityManagerFactory",
         transactionManagerRef = "tenantTransactionManager"
@@ -63,7 +69,12 @@ public class TenantJpaConfig {
                         "com.avnzor.oms_backend.audit.entity",
                         "com.avnzor.oms_backend.purchases.entity",
                         "com.avnzor.oms_backend.sales.entity",
-                        "com.avnzor.oms_backend.warehouse.entity"
+                        "com.avnzor.oms_backend.warehouse.entity",
+                        "com.avnzor.oms_backend.products.entity",
+                        "com.avnzor.oms_backend.customers.entity",
+                        "com.avnzor.oms_backend.shipping.entity",
+                        "com.avnzor.oms_backend.suppliers.entity",
+                        "com.avnzor.oms_backend.employees.entity"
                 )
                 .persistenceUnit("tenant")
                 .properties(properties)
