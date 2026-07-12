@@ -3,6 +3,7 @@ package com.avnzor.oms_backend.auth.config;
 import com.avnzor.oms_backend.audit.filter.AuditLoggingFilter;
 import com.avnzor.oms_backend.auth.filter.JwtAuthenticationFilter;
 import com.avnzor.oms_backend.auth.security.SecurityProblemSupport;
+import com.avnzor.oms_backend.tenants.filter.TenantContextFilter;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,6 +28,7 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
+            TenantContextFilter tenantContextFilter,
             JwtAuthenticationFilter jwtAuthenticationFilter,
             AuditLoggingFilter auditLoggingFilter,
             SecurityProblemSupport securityProblemSupport
@@ -40,14 +42,17 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/api/v1/platform/auth/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers(
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
                         ).permitAll()
+                        .requestMatchers("/api/v1/platform/**").hasRole("PLATFORM_ADMIN")
                         .anyRequest().authenticated()
                 )
+                .addFilterBefore(tenantContextFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(auditLoggingFilter, JwtAuthenticationFilter.class)
                 .build();

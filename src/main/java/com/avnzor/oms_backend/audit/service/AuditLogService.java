@@ -3,6 +3,8 @@ package com.avnzor.oms_backend.audit.service;
 import com.avnzor.oms_backend.audit.dto.AuditLogEntry;
 import com.avnzor.oms_backend.audit.entity.AuditLog;
 import com.avnzor.oms_backend.audit.repository.AuditLogRepository;
+import com.avnzor.oms_backend.tenants.context.TenantContext;
+import com.avnzor.oms_backend.tenants.context.TenantContextHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -20,11 +22,18 @@ public class AuditLogService {
 
     @Async
     @Transactional
-    public void logAsync(AuditLogEntry entry) {
+    public void logAsync(AuditLogEntry entry, TenantContext tenantContext) {
+        if (tenantContext == null) {
+            return;
+        }
+
         try {
+            TenantContextHolder.set(tenantContext);
             persist(entry);
         } catch (Exception exception) {
             log.error("Failed to persist audit log for eventType={}", entry.eventType(), exception);
+        } finally {
+            TenantContextHolder.clear();
         }
     }
 
@@ -39,7 +48,6 @@ public class AuditLogService {
         auditLog.setEntityType(entry.entityType());
         auditLog.setEntityId(entry.entityId());
         auditLog.setActor(entry.actor());
-        auditLog.setTenantId(entry.tenantId());
         auditLog.setDetails(entry.details());
         return auditLogRepository.save(auditLog);
     }

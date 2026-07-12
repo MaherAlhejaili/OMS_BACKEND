@@ -7,7 +7,6 @@ public record AuditLogEntry(
         String entityType,
         String entityId,
         String actor,
-        String tenantId,
         Map<String, Object> details
 ) {
 }

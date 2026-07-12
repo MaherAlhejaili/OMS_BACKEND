@@ -38,9 +38,6 @@ public class AuditLog {
     @Column(name = "actor", length = 255)
     private String actor;
 
-    @Column(name = "tenant_id", length = 64)
-    private String tenantId;
-
     @Convert(converter = JsonMapConverter.class)
     @JdbcTypeCode(SqlTypes.LONGVARCHAR)
     @Column(name = "details")

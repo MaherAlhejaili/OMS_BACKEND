@@ -1,6 +1,9 @@
 package com.avnzor.oms_backend.common.exception;
 
 import com.avnzor.oms_backend.common.dto.ApiResponse;
+import com.avnzor.oms_backend.tenants.exception.TenantContextMissingException;
+import com.avnzor.oms_backend.tenants.exception.TenantDisabledException;
+import com.avnzor.oms_backend.tenants.exception.TenantNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +23,22 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(TenantNotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleTenantNotFound(
+            TenantNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return buildError(HttpStatus.NOT_FOUND, exception.getMessage(), request);
+    }
+
+    @ExceptionHandler({TenantDisabledException.class, TenantContextMissingException.class})
+    public ResponseEntity<ApiResponse<Void>> handleTenantBadRequest(
+            RuntimeException exception,
+            HttpServletRequest request
+    ) {
+        return buildError(HttpStatus.BAD_REQUEST, exception.getMessage(), request);
+    }
 
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<ApiResponse<Void>> handleUnauthorized(

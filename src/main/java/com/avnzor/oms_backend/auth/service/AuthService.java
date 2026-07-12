@@ -7,45 +7,50 @@ import com.avnzor.oms_backend.auth.entity.WarehouseWorker;
 import com.avnzor.oms_backend.auth.repository.WarehouseWorkerRepository;
 import com.avnzor.oms_backend.auth.security.WarehouseUserPrincipal;
 import com.avnzor.oms_backend.common.exception.UnauthorizedException;
+import com.avnzor.oms_backend.tenants.context.TenantContextHolder;
+import com.avnzor.oms_backend.tenants.context.TenantContextHolder;
+import com.avnzor.oms_backend.tenants.resolver.TenantResolver;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class AuthService {
 
     private final WarehouseWorkerRepository warehouseWorkerRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
-
-    public AuthService(
-            WarehouseWorkerRepository warehouseWorkerRepository,
-            PasswordEncoder passwordEncoder,
-            JwtService jwtService
-    ) {
-        this.warehouseWorkerRepository = warehouseWorkerRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtService = jwtService;
-    }
+    private final TenantResolver tenantResolver;
 
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
-        WarehouseWorker worker = warehouseWorkerRepository.findByUsername(request.username())
-                .orElseThrow(() -> new UnauthorizedException("Invalid username or password"));
+        try {
+            tenantResolver.resolveForLogin(request.tenantSlug());
 
-        if (!passwordMatches(request.password(), worker.getPassword())) {
-            throw new UnauthorizedException("Invalid username or password");
+            WarehouseWorker worker = warehouseWorkerRepository.findByUsername(request.username())
+                    .orElseThrow(() -> new UnauthorizedException("Invalid username or password"));
+
+            if (!passwordMatches(request.password(), worker.getPassword())) {
+                throw new UnauthorizedException("Invalid username or password");
+            }
+
+            Long tenantId = TenantContextHolder.getTenantId();
+            String tenantSlug = TenantContextHolder.getTenantSlug();
+
+            WarehouseUserPrincipal principal = new WarehouseUserPrincipal(worker, tenantId, tenantSlug);
+            String accessToken = jwtService.generateTenantToken(principal);
+
+            return new LoginResponse(
+                    accessToken,
+                    "Bearer",
+                    jwtService.getExpirationSeconds(),
+                    toUserResponse(worker, tenantId, tenantSlug)
+            );
+        } finally {
+            TenantContextHolder.clear();
         }
-
-        WarehouseUserPrincipal principal = new WarehouseUserPrincipal(worker);
-        String accessToken = jwtService.generateToken(principal);
-
-        return new LoginResponse(
-                accessToken,
-                "Bearer",
-                jwtService.getExpirationSeconds(),
-                toUserResponse(worker)
-        );
     }
 
     private boolean passwordMatches(String rawPassword, String storedPassword) {
@@ -53,7 +58,6 @@ public class AuthService {
             return false;
         }
 
-        // Supports legacy plain-text passwords and BCrypt hashes from newer records.
         if (storedPassword.startsWith("$2a$") || storedPassword.startsWith("$2b$") || storedPassword.startsWith("$2y$")) {
             return passwordEncoder.matches(rawPassword, storedPassword);
         }
@@ -61,13 +65,15 @@ public class AuthService {
         return storedPassword.equals(rawPassword);
     }
 
-    private AuthenticatedUserResponse toUserResponse(WarehouseWorker worker) {
+    private AuthenticatedUserResponse toUserResponse(WarehouseWorker worker, Long tenantId, String tenantSlug) {
         return new AuthenticatedUserResponse(
                 worker.getId(),
                 worker.getUsername(),
                 worker.getName(),
                 worker.getRole(),
-                worker.getDepartment()
+                worker.getDepartment(),
+                tenantId,
+                tenantSlug
         );
     }
 }

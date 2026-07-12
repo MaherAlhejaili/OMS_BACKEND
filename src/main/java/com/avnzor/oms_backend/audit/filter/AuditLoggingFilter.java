@@ -4,6 +4,7 @@ import com.avnzor.oms_backend.audit.dto.AuditLogEntry;
 import com.avnzor.oms_backend.audit.service.AuditLogService;
 import com.avnzor.oms_backend.audit.support.AuditPathResolver;
 import com.avnzor.oms_backend.auth.security.WarehouseUserPrincipal;
+import com.avnzor.oms_backend.tenants.context.TenantContextHolder;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,7 +27,10 @@ public class AuditLoggingFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return path == null || !path.startsWith("/api/");
+        if (path == null || !path.startsWith("/api/")) {
+            return true;
+        }
+        return path.startsWith("/api/v1/platform/");
     }
 
     @Override
@@ -40,7 +44,12 @@ public class AuditLoggingFilter extends OncePerRequestFilter {
         try {
             filterChain.doFilter(request, response);
         } finally {
-            auditLogService.logAsync(buildEntry(request, response, startedAt));
+            if (TenantContextHolder.hasTenant()) {
+                auditLogService.logAsync(
+                        buildEntry(request, response, startedAt),
+                        TenantContextHolder.get()
+                );
+            }
         }
     }
 
@@ -79,7 +88,6 @@ public class AuditLoggingFilter extends OncePerRequestFilter {
                 resolvedPath.entityType(),
                 resolvedPath.entityId(),
                 actor,
-                null,
                 details
         );
     }

@@ -22,7 +22,7 @@ Essential context for continuing development after a fresh session. Read this be
 - Connects to an **existing MySQL database** — schema already exists with production tables.
 - **Never** use `ddl-auto: update` or `create`. Always `validate`.
 - **Never** add Flyway migrations that recreate existing tables.
-- Flyway **baseline is manual, one-time only** (`baseline-on-migrate: false`). Run `flyway:baseline` on existing DBs once; after that only versioned scripts (V2+) are applied.
+- Flyway is split: **platform** migrations (`db/platform-migration/`) and **tenant** migrations (`db/tenant-migration/`).
 - First application-owned migration: `V2__Create_audit_log.sql` (new table only).
 
 ### Auth source table
@@ -57,7 +57,7 @@ Entity: `auth/entity/WarehouseWorker.java`
 | Global API audit logging (`audit_log`) | Implemented |
 | Orders business logic | **Placeholder** controller |
 | Tracking business logic | **Placeholder** controller |
-| Multi-tenancy | **Not started** |
+| Multi-tenancy | **Implemented** — database per tenant, dynamic routing |
 | Returns module | **Not started** |
 | Audit log JPA entity/service | **Implemented** — global filter on `/api/**` |
 | MapStruct mappers | **Not added** |

@@ -93,9 +93,9 @@ Server: **http://localhost:8080** — profile **`dev`**
 ```
 src/main/java/com/avnzor/oms_backend/
 ├── OmsBackendApplication.java
+├── tenants/                 # Database-per-tenant routing, provisioning, platform admin
 ├── auth/                    # JWT login, security, warehouse users
-├── audit/                   # Global API audit logging (audit_log table)
-├── orders/                  # Orders (Logistic team only) — placeholder
+├── audit/                   # Global API audit logging (per-tenant audit_log table)
 ├── tracking/                # Tracking (all authenticated) — placeholder
 ├── common/
 │   ├── config/              # GlobalResponseHandler, JacksonConfig
@@ -244,6 +244,67 @@ Swagger is **disabled** in the `prod` profile.
 
 ---
 
+## Multi-tenancy (database per tenant)
+
+Each tenant has its **own MySQL database**. Business data is never shared and **no `tenant_id` column** exists in tenant tables.
+
+| Database | Purpose |
+|---|---|
+| `oms` (platform) | `tenants` registry, `platform_users`, encrypted DB credentials |
+| `tenant_1`, `tenant_2`, … | Users, orders, audit logs, all business modules |
+
+### Dev databases
+
+| DB | Created by |
+|---|---|
+| `oms` | Platform Flyway on startup (`db/platform-migration/`) |
+| `tenant_1` | Dev seed + tenant Flyway (`db/tenant-migration/`) |
+
+### Login (tenant users)
+
+```http
+POST /api/v1/auth/login
+Content-Type: application/json
+
+{
+  "tenantSlug": "tenant-1",
+  "username": "logistic.user",
+  "password": "password"
+}
+```
+
+JWT includes `tenantId` and `tenantSlug`. Every authenticated request resolves the tenant and routes to the correct database automatically.
+
+### Platform admin (provision tenants)
+
+```http
+POST /api/v1/platform/auth/login
+{ "username": "platform.admin", "password": "admin123" }
+
+POST /api/v1/platform/tenants
+Authorization: Bearer <platformToken>
+{
+  "slug": "tenant-2",
+  "name": "Tenant Two",
+  "databaseHost": "127.0.0.1",
+  "databasePort": 3306,
+  "databaseName": "tenant_2",
+  "databaseUsername": "root",
+  "databasePassword": ""
+}
+```
+
+New tenants are provisioned **without restart**: database created, Flyway migrations applied, datasource registered dynamically.
+
+### Required env var
+
+| Variable | Purpose |
+|---|---|
+| `TENANT_DB_ENCRYPTION_KEY` | AES encryption key for tenant DB passwords (min 32 chars) |
+| `PLATFORM_DATABASE_NAME` | Platform DB name (default: `oms`) |
+
+---
+
 ## Database and Flyway
 
 Connects to an **existing production database**. Existing tables are recorded as **baseline version 1**; application-owned changes start at **V2__**.
@@ -380,7 +441,7 @@ See [FIXES.md](FIXES.md) for detailed issue history.
 - [ ] Full tracking implementation
 - [ ] Returns module
 - [x] Global audit logging for all `/api/**` requests
-- [ ] Multi-tenancy
+- [x] Database-per-tenant multi-tenancy
 - [ ] BCrypt migration for legacy passwords
 - [ ] GitHub secrets + server provisioning
 - [ ] Docker-based CD (optional)

@@ -1,7 +1,11 @@
 package com.avnzor.oms_backend.auth.filter;
 
+import com.avnzor.oms_backend.auth.security.WarehouseUserPrincipal;
 import com.avnzor.oms_backend.auth.service.JwtService;
 import com.avnzor.oms_backend.auth.service.WarehouseUserDetailsService;
+import com.avnzor.oms_backend.tenants.resolver.TenantResolver;
+import com.avnzor.oms_backend.tenants.security.PlatformUserPrincipal;
+import com.avnzor.oms_backend.tenants.service.PlatformUserDetailsService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,11 +24,20 @@ import java.io.IOException;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
-    private final WarehouseUserDetailsService userDetailsService;
+    private final WarehouseUserDetailsService warehouseUserDetailsService;
+    private final PlatformUserDetailsService platformUserDetailsService;
+    private final TenantResolver tenantResolver;
 
-    public JwtAuthenticationFilter(JwtService jwtService, WarehouseUserDetailsService userDetailsService) {
+    public JwtAuthenticationFilter(
+            JwtService jwtService,
+            WarehouseUserDetailsService warehouseUserDetailsService,
+            PlatformUserDetailsService platformUserDetailsService,
+            TenantResolver tenantResolver
+    ) {
         this.jwtService = jwtService;
-        this.userDetailsService = userDetailsService;
+        this.warehouseUserDetailsService = warehouseUserDetailsService;
+        this.platformUserDetailsService = platformUserDetailsService;
+        this.tenantResolver = tenantResolver;
     }
 
     @Override
@@ -44,17 +57,46 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String username = jwtService.extractUsername(jwt);
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-
-            if (userDetails instanceof com.avnzor.oms_backend.auth.security.WarehouseUserPrincipal principal
-                    && jwtService.isTokenValid(jwt, principal)) {
-                UsernamePasswordAuthenticationToken authenticationToken =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
-            }
+            authenticateToken(jwt, username, request);
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void authenticateToken(String jwt, String username, HttpServletRequest request) {
+        if (jwtService.isPlatformToken(jwt)) {
+            authenticatePlatformToken(jwt, username, request);
+            return;
+        }
+
+        if (jwtService.isTenantToken(jwt)) {
+            authenticateTenantToken(jwt, username, request);
+        }
+    }
+
+    private void authenticatePlatformToken(String jwt, String username, HttpServletRequest request) {
+        UserDetails userDetails = platformUserDetailsService.loadUserByUsername(username);
+
+        if (userDetails instanceof PlatformUserPrincipal principal
+                && jwtService.isPlatformTokenValid(jwt, principal)) {
+            setAuthentication(userDetails, request);
+        }
+    }
+
+    private void authenticateTenantToken(String jwt, String username, HttpServletRequest request) {
+        tenantResolver.resolveFromJwt(jwt);
+        UserDetails userDetails = warehouseUserDetailsService.loadUserByUsername(username);
+
+        if (userDetails instanceof WarehouseUserPrincipal principal
+                && jwtService.isTenantTokenValid(jwt, principal)) {
+            setAuthentication(userDetails, request);
+        }
+    }
+
+    private void setAuthentication(UserDetails userDetails, HttpServletRequest request) {
+        UsernamePasswordAuthenticationToken authenticationToken =
+                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+        authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+        SecurityContextHolder.getContext().setAuthentication(authenticationToken);
     }
 }

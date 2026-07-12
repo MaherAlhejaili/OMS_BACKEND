@@ -1,9 +1,11 @@
-spring:
+app:
   datasource:
-    url: jdbc:mysql://${DATABASE_HOST:127.0.0.1}:3306/${DATABASE_NAME:avnzor}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-    username: ${DATABASE_USER:root}
-    password: ${DATABASE_PASSWORD:}
+    platform:
+      url: jdbc:mysql://${DATABASE_HOST:127.0.0.1}:3306/${PLATFORM_DATABASE_NAME:oms}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      username: ${DATABASE_USER:root}
+      password: ${DATABASE_PASSWORD:}
 
+spring:
   jpa:
     show-sql: true
     properties:

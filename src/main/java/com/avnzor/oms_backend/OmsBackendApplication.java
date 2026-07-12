@@ -9,5 +9,4 @@ public class OmsBackendApplication {
     public static void main(String[] args) {
         SpringApplication.run(OmsBackendApplication.class, args);
     }
-
 }

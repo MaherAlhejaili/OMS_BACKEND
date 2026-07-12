@@ -2,6 +2,8 @@ package com.avnzor.oms_backend.auth.service;
 
 import com.avnzor.oms_backend.auth.repository.WarehouseWorkerRepository;
 import com.avnzor.oms_backend.auth.security.WarehouseUserPrincipal;
+import com.avnzor.oms_backend.tenants.context.TenantContextHolder;
+import com.avnzor.oms_backend.tenants.exception.TenantContextMissingException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -18,8 +20,16 @@ public class WarehouseUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        if (!TenantContextHolder.hasTenant()) {
+            throw new TenantContextMissingException();
+        }
+
         return warehouseWorkerRepository.findByUsername(username)
-                .map(WarehouseUserPrincipal::new)
+                .map(worker -> new WarehouseUserPrincipal(
+                        worker,
+                        TenantContextHolder.getTenantId(),
+                        TenantContextHolder.getTenantSlug()
+                ))
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
     }
 }

@@ -5,6 +5,8 @@ public record AuthenticatedUserResponse(
         String username,
         String name,
         String role,
-        String department
+        String department,
+        Long tenantId,
+        String tenantSlug
 ) {
 }

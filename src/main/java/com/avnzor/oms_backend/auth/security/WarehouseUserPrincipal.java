@@ -19,15 +19,19 @@ public class WarehouseUserPrincipal implements UserDetails {
     private final String name;
     private final String role;
     private final String department;
+    private final Long tenantId;
+    private final String tenantSlug;
     private final Collection<? extends GrantedAuthority> authorities;
 
-    public WarehouseUserPrincipal(WarehouseWorker worker) {
+    public WarehouseUserPrincipal(WarehouseWorker worker, Long tenantId, String tenantSlug) {
         this.id = worker.getId();
         this.username = worker.getUsername();
         this.password = worker.getPassword();
         this.name = worker.getName();
         this.role = worker.getRole();
         this.department = worker.getDepartment();
+        this.tenantId = tenantId;
+        this.tenantSlug = tenantSlug;
         this.authorities = buildAuthorities(worker.getRole(), worker.getDepartment());
     }
 
