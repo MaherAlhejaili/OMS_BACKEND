@@ -1,6 +1,8 @@
 package com.avnzor.oms_backend.common.exception;
 
+import com.avnzor.oms_backend.auth.util.JwtErrorMessages;
 import com.avnzor.oms_backend.common.dto.ApiResponse;
+import io.jsonwebtoken.JwtException;
 import com.avnzor.oms_backend.tenants.exception.TenantContextMissingException;
 import com.avnzor.oms_backend.tenants.exception.TenantDisabledException;
 import com.avnzor.oms_backend.tenants.exception.TenantNotFoundException;
@@ -46,6 +48,15 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
         return buildError(HttpStatus.UNAUTHORIZED, exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(JwtException.class)
+    public ResponseEntity<ApiResponse<Void>> handleJwtException(
+            JwtException exception,
+            HttpServletRequest request
+    ) {
+        log.debug("Invalid JWT on path {}: {}", request.getRequestURI(), exception.getMessage());
+        return buildError(HttpStatus.UNAUTHORIZED, JwtErrorMessages.resolve(exception), request);
     }
 
     @ExceptionHandler(BadRequestException.class)

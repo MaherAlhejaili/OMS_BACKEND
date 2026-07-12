@@ -35,6 +35,19 @@ class TrackingControllerIT extends AbstractMockMvcIntegrationTest {
     void shouldRejectAnonymousUser() throws Exception {
         mockMvc.perform(get("/api/v1/tracking"))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.success").value(false));
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Authentication required"));
+    }
+
+    @Test
+    @DisplayName("Given invalid JWT When listing tracking Then returns clear unauthorized message")
+    void shouldRejectInvalidJwt() throws Exception {
+        String token = JwtTestSupport.bearerToken(jwtService, TestUserFactory.warehousePrincipal()) + "x";
+
+        mockMvc.perform(get("/api/v1/tracking")
+                        .header("Authorization", token))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Invalid access token. Please log in again."));
     }
 }

@@ -30,7 +30,15 @@ public class SecurityProblemSupport implements AuthenticationEntryPoint, AccessD
             HttpServletResponse response,
             AuthenticationException authException
     ) throws IOException {
-        writeProblem(response, request, HttpStatus.UNAUTHORIZED, "Authentication required");
+        writeUnauthorized(request, response, "Authentication required");
+    }
+
+    public void writeUnauthorized(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            String message
+    ) throws IOException {
+        writeProblem(response, request, HttpStatus.UNAUTHORIZED, message);
     }
 
     @Override

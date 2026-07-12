@@ -1,7 +1,10 @@
 package com.avnzor.oms_backend.auth.filter;
 
+import com.avnzor.oms_backend.auth.security.SecurityProblemSupport;
 import com.avnzor.oms_backend.auth.security.WarehouseUserPrincipal;
 import com.avnzor.oms_backend.auth.service.JwtService;
+import com.avnzor.oms_backend.auth.util.JwtErrorMessages;
+import io.jsonwebtoken.JwtException;
 import com.avnzor.oms_backend.auth.service.WarehouseUserDetailsService;
 import com.avnzor.oms_backend.tenants.resolver.TenantResolver;
 import com.avnzor.oms_backend.tenants.security.PlatformUserPrincipal;
@@ -15,6 +18,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -23,21 +28,26 @@ import java.io.IOException;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+
     private final JwtService jwtService;
     private final WarehouseUserDetailsService warehouseUserDetailsService;
     private final PlatformUserDetailsService platformUserDetailsService;
     private final TenantResolver tenantResolver;
+    private final SecurityProblemSupport securityProblemSupport;
 
     public JwtAuthenticationFilter(
             JwtService jwtService,
             WarehouseUserDetailsService warehouseUserDetailsService,
             PlatformUserDetailsService platformUserDetailsService,
-            TenantResolver tenantResolver
+            TenantResolver tenantResolver,
+            SecurityProblemSupport securityProblemSupport
     ) {
         this.jwtService = jwtService;
         this.warehouseUserDetailsService = warehouseUserDetailsService;
         this.platformUserDetailsService = platformUserDetailsService;
         this.tenantResolver = tenantResolver;
+        this.securityProblemSupport = securityProblemSupport;
     }
 
     @Override
@@ -54,13 +64,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         String jwt = authorizationHeader.substring(7);
-        String username = jwtService.extractUsername(jwt);
 
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            authenticateToken(jwt, username, request);
+        try {
+            String username = jwtService.extractUsername(jwt);
+
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                authenticateToken(jwt, username, request);
+            }
+
+            filterChain.doFilter(request, response);
+        } catch (JwtException exception) {
+            log.debug("Rejected invalid JWT on {}: {}", request.getRequestURI(), exception.getMessage());
+            securityProblemSupport.writeUnauthorized(
+                    request,
+                    response,
+                    JwtErrorMessages.resolve(exception)
+            );
         }
-
-        filterChain.doFilter(request, response);
     }
 
     private void authenticateToken(String jwt, String username, HttpServletRequest request) {
