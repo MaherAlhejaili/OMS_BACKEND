@@ -4,61 +4,64 @@ Order Management System backend for Avnzor. A modular Spring Boot application th
 
 ---
 
+## Documentation index
+
+| File | Purpose |
+|---|---|
+| [README.md](README.md) | Developer guide — setup, usage, API, deployment overview |
+| [CONTEXT.md](CONTEXT.md) | Project context for future sessions — constraints, status, decisions |
+| [FIXES.md](FIXES.md) | Issues encountered and how they were resolved |
+| [TOOLS.md](TOOLS.md) | Technologies and principles (brief reference) |
+| [deploy/README.md](deploy/README.md) | Server layout, systemd, GitHub secrets |
+
+---
+
 ## Tech stack
 
 | Layer | Technology |
 |---|---|
 | Language | Java 21 |
-| Framework | Spring Boot 4.x |
+| Framework | Spring Boot 4.1 |
 | Build | Maven (wrapper included) |
 | Database | MySQL |
 | ORM | Spring Data JPA (Hibernate `validate` only) |
 | Migrations | Flyway |
 | Security | Spring Security + JWT |
+| API docs | springdoc-openapi (Swagger UI) |
+| Container | Docker (multi-stage) |
 | CI/CD | GitHub Actions |
 
 ---
 
 ## Prerequisites
 
-Before you start, install:
-
 - **Java 21** (Temurin recommended)
-- **Maven** — optional; the project includes `./mvnw`
-- **MySQL 8+** running locally
+- **Maven** — optional; project includes `./mvnw`
+- **MySQL** running locally
 - **Git**
+- **Docker Desktop** — optional, for container builds
 
 ---
 
 ## Quick start
 
-### 1. Clone the repository
+### 1. Clone
 
 ```bash
 git clone https://github.com/MaherAlhejaili/OMS_BACKEND.git
 cd OMS_BACKEND
 ```
 
-### 2. Create the local database
-
-The `dev` profile connects to database `avnzor` by default. The schema already exists in shared environments; for local development ensure the database is available:
+### 2. Create databases
 
 ```sql
 CREATE DATABASE IF NOT EXISTS avnzor;
-```
-
-For automated tests, also create:
-
-```sql
 CREATE DATABASE IF NOT EXISTS avnzor_test;
 ```
 
-### 3. Configure environment variables (optional)
-
-Local development works with defaults in `application-dev.yml`. Override when needed:
+### 3. Environment variables (optional for local dev)
 
 ```powershell
-# Windows PowerShell
 $env:DATABASE_HOST="127.0.0.1"
 $env:DATABASE_NAME="avnzor"
 $env:DATABASE_USER="root"
@@ -66,70 +69,49 @@ $env:DATABASE_PASSWORD="your-password"
 $env:JWT_SECRET="local-dev-secret-at-least-32-characters"
 ```
 
-```bash
-# Linux / macOS
-export DATABASE_HOST=127.0.0.1
-export DATABASE_NAME=avnzor
-export DATABASE_USER=root
-export DATABASE_PASSWORD=your-password
-export JWT_SECRET=local-dev-secret-at-least-32-characters
-```
+> Never commit `.env` files or real secrets to Git.
 
-> **Never commit `.env` files or real secrets to Git.**
+### 4. Start
 
-### 4. Start the application
-
-```bash
-# Linux / macOS
-./mvnw spring-boot:run
-
-# Windows
+```powershell
 .\mvnw.cmd spring-boot:run
 ```
 
-The server starts on **http://localhost:8080** with the **`dev`** profile.
+Server: **http://localhost:8080** — profile **`dev`**
 
-### 5. Verify it is running
+### 5. Verify
 
-```bash
-curl http://localhost:8080/actuator/health
-```
-
-Expected response: `{"status":"UP"}`
+| URL | Purpose |
+|---|---|
+| http://localhost:8080/actuator/health | Health check |
+| http://localhost:8080/swagger-ui.html | API documentation |
 
 ---
 
 ## Project structure
 
-The codebase follows a **package-by-feature** modular monolith:
-
 ```
 src/main/java/com/avnzor/oms_backend/
 ├── OmsBackendApplication.java
 ├── auth/                    # JWT login, security, warehouse users
-│   ├── controller/
-│   ├── service/
-│   ├── repository/
-│   ├── entity/
-│   ├── dto/
-│   ├── filter/
-│   ├── security/
-│   └── config/
-├── orders/                  # Orders feature (Logistic team only)
-│   └── controller/
-├── tracking/                # Tracking feature (all authenticated users)
-│   └── controller/
-└── common/                  # Shared exceptions and cross-cutting code
-    └── exception/
+├── orders/                  # Orders (Logistic team only) — placeholder
+├── tracking/                # Tracking (all authenticated) — placeholder
+├── common/
+│   ├── config/              # GlobalResponseHandler, JacksonConfig
+│   ├── dto/                 # ApiResponse wrapper
+│   └── exception/           # GlobalExceptionHandler, custom exceptions
+└── config/                  # OpenApiConfig
 
 src/main/resources/
-├── application.yml          # Shared configuration
-├── application-dev.yml      # Local development
-├── application-test.yml     # Automated tests
-├── application-staging.yml  # Staging server
-├── application-prod.yml     # Production server
-├── logback-spring.xml       # Logging (console + file on staging/prod)
-└── db/migration/            # Flyway SQL migrations
+├── application.yml          # Shared config
+├── application-{dev,test,staging,prod}.yml
+├── logback-spring.xml
+└── db/migration/            # Flyway scripts (V2+)
+
+src/test/resources/db/test-migration/   # Test-only migrations
+deploy/                                 # Server deploy assets
+.github/workflows/                      # CI and CD pipelines
+Dockerfile                              # Multi-stage container build
 ```
 
 ### Architecture rules
@@ -140,60 +122,42 @@ Controller → Service → Repository → Database
 
 - Controllers never access repositories directly.
 - Business logic lives in services.
-- API responses use DTOs, never JPA entities.
-- Hibernate **validates** mappings only; Flyway owns schema changes.
-- Security is configured in the `auth` module, not in controllers.
+- API uses DTOs, never JPA entities in responses.
+- Hibernate **validates** only; Flyway owns schema changes.
 
 ---
 
-## Spring profiles
+## API response format
 
-| Profile | Used for | Activated by |
-|---|---|---|
-| `dev` | Local development | Default in `application.yml` |
-| `test` | Maven tests / CI | `SPRING_PROFILES_ACTIVE=test` |
-| `staging` | Staging server | `application.env` on server |
-| `prod` | Production server | `application.env` on server |
+All endpoints return a unified `ApiResponse<T>`:
 
-Shared settings (Flyway, JPA `validate`, dialect) live in `application.yml`. Profile files contain **only environment-specific overrides**.
+**Success:**
+```json
+{
+  "success": true,
+  "message": "Request completed successfully",
+  "data": { },
+  "timestamp": "2026-07-12T11:00:00Z"
+}
+```
 
----
-
-## Database and Flyway
-
-This project connects to an **existing production database**. Flyway was introduced safely using a baseline:
-
-- Existing schema = **version 1** (baseline, not recreated)
-- New changes start at **V2__** and above
-- `spring.jpa.hibernate.ddl-auto=validate` — Hibernate never alters tables
-
-### Adding a migration
-
-1. Create a new file under `src/main/resources/db/migration/`:
-
-   ```
-   V3__Describe_your_change.sql
-   ```
-
-2. Follow naming: `V{version}__{Snake_Case_Description}.sql`
-
-3. **Never edit** a migration that has already been applied to shared environments.
-
-4. Test locally, then commit.
-
-### Flyway checksum mismatch (common on Windows)
-
-If startup fails with a checksum mismatch after line-ending changes:
-
-```bash
-./mvnw flyway:repair
+**Error:**
+```json
+{
+  "success": false,
+  "message": "Validation failed",
+  "timestamp": "2026-07-12T11:00:00Z",
+  "status": 400,
+  "path": "/api/v1/auth/login",
+  "errors": { "username": "must not be blank" }
+}
 ```
 
 ---
 
 ## Authentication and authorization
 
-Users are loaded from the existing `sma_warehouse_users` table.
+Users are loaded from existing table **`sma_warehouse_users`**.
 
 ### Login
 
@@ -201,19 +165,16 @@ Users are loaded from the existing `sma_warehouse_users` table.
 POST /api/v1/auth/login
 Content-Type: application/json
 
-{
-  "username": "your-username",
-  "password": "your-password"
-}
+{ "username": "your-username", "password": "your-password" }
 ```
 
-Response includes `accessToken`. Send it on protected requests:
+Use `data.accessToken` from the wrapped response on protected calls:
 
 ```http
 Authorization: Bearer <accessToken>
 ```
 
-### Access rules
+### Endpoints
 
 | Endpoint | Access |
 |---|---|
@@ -221,196 +182,150 @@ Authorization: Bearer <accessToken>
 | `GET /api/v1/tracking` | Any authenticated user |
 | `GET /api/v1/orders` | Logistic department only |
 
-Logistic departments recognized: `Logistic`, `Logistics`, `Logistic team` (case-insensitive).
+Logistic departments: `Logistic`, `Logistics`, `Logistic team` (case-insensitive).
 
-### Test users (test profile only)
+### Swagger
 
-When running tests, seeded users are available:
+1. Open http://localhost:8080/swagger-ui.html
+2. Call `POST /api/v1/auth/login`
+3. Copy `accessToken` from response `data`
+4. Click **Authorize** → `Bearer <token>`
 
-| Username | Password | Department | Orders access |
-|---|---|---|---|
-| `logistic.user` | `password` | Logistic | Yes |
-| `warehouse.user` | `password` | Warehouse | No |
-
----
-
-## API testing (manual)
-
-### PowerShell
-
-```powershell
-# Login
-$login = Invoke-RestMethod `
-  -Uri "http://localhost:8080/api/v1/auth/login" `
-  -Method POST `
-  -ContentType "application/json" `
-  -Body '{"username":"YOUR_USERNAME","password":"YOUR_PASSWORD"}'
-
-$headers = @{ Authorization = "Bearer $($login.accessToken)" }
-
-# Tracking (any authenticated user)
-Invoke-RestMethod -Uri "http://localhost:8080/api/v1/tracking" -Headers $headers
-
-# Orders (Logistic team only)
-Invoke-RestMethod -Uri "http://localhost:8080/api/v1/orders" -Headers $headers
-```
-
-### curl
-
-```bash
-# Login
-curl -X POST http://localhost:8080/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"YOUR_USERNAME","password":"YOUR_PASSWORD"}'
-
-# Protected endpoint
-curl http://localhost:8080/api/v1/tracking \
-  -H "Authorization: Bearer YOUR_TOKEN"
-```
-
-Use real credentials from `sma_warehouse_users` when running against the `dev` profile.
+Swagger is **disabled** in the `prod` profile.
 
 ---
 
-## Running tests
+## Spring profiles
+
+| Profile | Used for | Activated by |
+|---|---|---|
+| `dev` | Local development | Default |
+| `test` | Maven tests / CI | `SPRING_PROFILES_ACTIVE=test` |
+| `staging` | Staging server | `application.env` on server |
+| `prod` | Production server | `application.env` on server |
+
+---
+
+## Database and Flyway
+
+Connects to an **existing production database**. Flyway baseline treats current schema as **version 1**; new scripts start at **V2__**.
 
 ```bash
-./mvnw test
+# Add migration
+src/main/resources/db/migration/V3__Your_change.sql
+
+# Repair checksum mismatch (Windows line endings)
+./mvnw flyway:repair
 ```
-
-Full verification (what CI runs on pull requests):
-
-```bash
-./mvnw clean verify
-```
-
-Tests use the `test` profile and database `avnzor_test`.
 
 ---
 
 ## Environment variables
 
-| Variable | Description | Required on servers |
-|---|---|---|
-| `SPRING_PROFILES_ACTIVE` | Active profile (`staging`, `prod`) | Yes |
-| `DATABASE_HOST` | MySQL host | Yes |
-| `DATABASE_PORT` | MySQL port | Yes |
-| `DATABASE_NAME` | Database name | Yes |
-| `DATABASE_USER` | Database user | Yes |
-| `DATABASE_PASSWORD` | Database password | Yes |
-| `JWT_SECRET` | JWT signing secret (min 32 chars) | Yes |
-| `JWT_EXPIRATION` | Token lifetime in milliseconds | Yes |
-| `SERVER_PORT` | HTTP port | Yes |
-| `LOG_FILE_PATH` | Log file path on server | Recommended |
-
-Optional integration settings (see `application.yml`):
-
-| Variable | Description |
+| Variable | Required on servers |
 |---|---|
-| `TRACKING_API_URL` | External tracking API base URL |
-| `SHIPPING_PROVIDER_URL` | Shipping provider API URL |
-| `SHIPPING_PROVIDER_API_KEY` | Shipping provider API key |
-| `NOTIFICATION_WEBHOOK_URL` | Webhook for notifications |
+| `SPRING_PROFILES_ACTIVE` | Yes |
+| `DATABASE_HOST` | Yes |
+| `DATABASE_PORT` | Yes |
+| `DATABASE_NAME` | Yes |
+| `DATABASE_USER` | Yes |
+| `DATABASE_PASSWORD` | Yes |
+| `JWT_SECRET` | Yes |
+| `JWT_EXPIRATION` | Yes |
+| `SERVER_PORT` | Yes |
+| `LOG_FILE_PATH` | Recommended |
 
-Copy `deploy/config/application.env.example` as a starting point. **Do not commit real `.env` files.**
+Templates: `deploy/config/application.env.example`, `production.env.example`
+
+---
+
+## Docker
+
+```bash
+# Build
+docker build -t avnzor-oms:latest .
+
+# Run locally (Windows — use host.docker.internal for MySQL)
+docker run -p 8080:8080 \
+  -e SPRING_PROFILES_ACTIVE=dev \
+  -e DATABASE_HOST=host.docker.internal \
+  -e DATABASE_NAME=avnzor \
+  -e DATABASE_USER=root \
+  -e DATABASE_PASSWORD= \
+  -e JWT_SECRET=local-dev-secret-at-least-32-characters \
+  -e JWT_EXPIRATION=86400000 \
+  -e SERVER_PORT=8080 \
+  avnzor-oms:latest
+```
+
+Same image for staging and production — only env vars and profile differ.
 
 ---
 
 ## CI/CD
 
-| Workflow | Trigger | What it does |
+| Workflow | Trigger | Pipeline |
 |---|---|---|
-| `ci.yml` | Pull requests | Build and test |
-| `cd.yml` | Push to `master` | Build → test → deploy **staging** |
-| `cd.yml` | Manual run | Build → test → deploy **staging** → deploy **production** (requires approval) |
+| `ci.yml` | Pull requests | Build + test |
+| `cd.yml` | Push to `master` | Build → deploy **staging** |
+| `cd.yml` | Manual run | Build → staging → **production** (approval required) |
 
-### Deployment pipeline
-
-```
-Push to master:
-  Build and test → Deploy to staging
-
-Manual production release:
-  Build and test → Deploy to staging → Deploy to production (approval required)
-```
-
-Production always runs **after** staging succeeds. On a normal push, production is skipped.
-
-- Staging and production run the **same JAR artifact**.
-- Only environment variables and Spring profile differ.
-- Promoting staging → production requires **no code changes**.
-
-See [deploy/README.md](deploy/README.md) for server layout, systemd setup, and GitHub Environment secrets.
+GitHub Environment secrets are **not yet configured** — deployment deferred until servers are ready. See [deploy/README.md](deploy/README.md).
 
 ---
 
 ## Common commands
 
-```bash
-# Start locally
-./mvnw spring-boot:run
+```powershell
+.\mvnw.cmd spring-boot:run          # Start locally
+.\mvnw.cmd test                     # Run tests
+.\mvnw.cmd clean verify             # Full CI verification
+.\mvnw.cmd flyway:repair            # Fix Flyway checksum mismatch
+.\mvnw.cmd package -DskipTests       # Build JAR
 
-# Run tests
-./mvnw test
-
-# Build JAR
-./mvnw package -DskipTests
-
-# Repair Flyway checksums after line-ending issues
-./mvnw flyway:repair
+# Kill process on port 8080 (Windows)
+Get-NetTCPConnection -LocalPort 8080 | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
 ```
-
-### IntelliJ IDEA
-
-1. Open the project as a Maven project.
-2. Run `OmsBackendApplication` from `src/main/java`.
-3. The `dev` profile is active by default.
 
 ---
 
 ## Troubleshooting
 
+See [FIXES.md](FIXES.md) for detailed issue history.
+
 | Problem | Solution |
 |---|---|
-| `Port 8080 was already in use` | Stop the other process or set `$env:SERVER_PORT="8081"` |
-| `Unknown database 'avnzor'` | Create the database in MySQL |
-| `Communications link failure` | Ensure MySQL is running |
-| Flyway checksum mismatch | Run `./mvnw flyway:repair` |
-| `Access denied` on `/orders` | User department must be Logistic |
-| `401 Unauthorized` | Login again; include `Authorization: Bearer <token>` |
-| Hibernate validation error | Entity mapping does not match the database table |
+| Port 8080 in use | Kill process (command above) or `$env:SERVER_PORT="8081"` |
+| Unknown database | Create `avnzor` / `avnzor_test` |
+| Flyway checksum mismatch | `.\mvnw.cmd flyway:repair` |
+| Docker daemon not running | Start Docker Desktop |
+| `ObjectMapper` bean error | Ensure `spring-boot-starter-jackson` and `JacksonConfig` exist |
+| 403 on `/orders` | User department must be Logistic |
+| 401 Unauthorized | Include `Authorization: Bearer <token>` |
 
 ---
 
 ## Contributing
 
-1. Create a feature branch from `master`.
-2. Follow the existing package-by-feature structure.
-3. Add Flyway migrations for schema changes (never use `ddl-auto: update`).
+1. Branch from `master`.
+2. Follow package-by-feature structure.
+3. Add Flyway migrations for schema changes.
 4. Keep secrets out of source control.
-5. Open a pull request — CI must pass before merge.
-6. Merging to `master` deploys automatically to staging.
-
-### Code conventions
-
-- Constructor injection only (`@RequiredArgsConstructor` + `final` fields).
-- DTOs for all API request/response objects.
-- Jakarta Validation on request DTOs.
-- SLF4J for logging; never log passwords or JWTs.
-- Keep methods short and focused.
+5. Open a PR — `ci.yml` must pass.
+6. Merge to `master` triggers staging deploy (once secrets are configured).
 
 ---
 
 ## Roadmap
 
-Planned capabilities:
-
-- Multi-tenancy
-- Expanded RBAC
-- Orders, Returns, Tracking (full implementation)
-- Audit logging
-- Docker images
-- OpenAPI documentation
+- [ ] Full orders implementation (map existing tables)
+- [ ] Full tracking implementation
+- [ ] Returns module
+- [ ] Audit log entity and service
+- [ ] Multi-tenancy
+- [ ] BCrypt migration for legacy passwords
+- [ ] GitHub secrets + server provisioning
+- [ ] Docker-based CD (optional)
 
 ---
 

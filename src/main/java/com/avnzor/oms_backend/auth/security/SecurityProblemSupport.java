@@ -1,5 +1,7 @@
 package com.avnzor.oms_backend.auth.security;
 
+import com.avnzor.oms_backend.common.dto.ApiResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
@@ -12,10 +14,15 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 
 @Component
 public class SecurityProblemSupport implements AuthenticationEntryPoint, AccessDeniedHandler {
+
+    private final ObjectMapper objectMapper;
+
+    public SecurityProblemSupport(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
 
     @Override
     public void commence(
@@ -41,18 +48,8 @@ public class SecurityProblemSupport implements AuthenticationEntryPoint, AccessD
             HttpStatus status,
             String message
     ) throws IOException {
-        String body = """
-                {
-                  "timestamp": "%s",
-                  "status": %d,
-                  "error": "%s",
-                  "message": "%s",
-                  "path": "%s"
-                }
-                """.formatted(
-                Instant.now(),
+        ApiResponse<Void> body = ApiResponse.error(
                 status.value(),
-                status.getReasonPhrase(),
                 message,
                 request.getRequestURI()
         );
@@ -60,6 +57,6 @@ public class SecurityProblemSupport implements AuthenticationEntryPoint, AccessD
         response.setStatus(status.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        response.getWriter().write(body);
+        objectMapper.writeValue(response.getOutputStream(), body);
     }
 }

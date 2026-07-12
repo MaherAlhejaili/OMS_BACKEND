@@ -1,0 +1,53 @@
+# Version control and CI metadata (not needed inside the image)
+.git
+.gitignore
+.gitattributes
+.github
+
+# Build output — the image builds its own artifact
+target/
+build/
+out/
+
+# IDE and editor files
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+.sts4-cache
+.apt_generated
+
+# Local secrets and environment files — inject at runtime only
+.env
+.env.*
+!.env.example
+deploy/config/*.env
+!deploy/config/*.env.example
+
+# Logs and runtime data
+logs/
+*.log
+*.log.*
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Documentation and deployment notes (not required at runtime)
+README.md
+HELP.md
+deploy/README.md
+
+# Docker files are consumed by the daemon context, not copied into layers
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Test resources are not needed for the production image
+src/test/

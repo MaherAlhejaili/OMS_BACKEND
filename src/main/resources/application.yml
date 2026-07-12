@@ -45,6 +45,14 @@ logging:
     root: INFO
     com.avnzor: INFO
 
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+
 app:
   jwt:
     # Dev-only defaults; staging and prod require JWT_SECRET and JWT_EXPIRATION env vars.
