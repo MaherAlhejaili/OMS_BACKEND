@@ -44,7 +44,11 @@ public class TenantJpaConfig {
         routingDataSource.setTargetDataSources(targets);
 
         if (!targets.isEmpty()) {
-            routingDataSource.setDefaultTargetDataSource(targets.values().iterator().next());
+            Object defaultDataSource = targets.get("avnzor");
+            if (defaultDataSource == null) {
+                defaultDataSource = targets.values().iterator().next();
+            }
+            routingDataSource.setDefaultTargetDataSource(defaultDataSource);
             routingDataSource.setLenientFallback(true);
         }
 

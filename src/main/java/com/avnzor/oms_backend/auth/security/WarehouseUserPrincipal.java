@@ -13,7 +13,7 @@ import java.util.List;
 @Getter
 public class WarehouseUserPrincipal implements UserDetails {
 
-    private final Integer id;
+    private final Long id;
     private final String username;
     private final String password;
     private final String name;

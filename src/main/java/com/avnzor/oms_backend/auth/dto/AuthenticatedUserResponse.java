@@ -1,7 +1,7 @@
 package com.avnzor.oms_backend.auth.dto;
 
 public record AuthenticatedUserResponse(
-        Integer id,
+        Long id,
         String username,
         String name,
         String role,

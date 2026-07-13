@@ -478,7 +478,7 @@ public class SaleService {
             }
 
             SaleItem newItem = new SaleItem();
-            newItem.setSale(sale);
+            newItem.setSaleId(sale.getId());
             newItem.setProductCode(code);
             newItem.setProductName(itemRequest.productName() == null ? code : itemRequest.productName());
             newItem.setProductType("standard");

@@ -4,6 +4,8 @@ import com.avnzor.oms_backend.tenants.dto.TenantResponse;
 import com.avnzor.oms_backend.tenants.entity.Tenant;
 import org.springframework.stereotype.Component;
 
+import java.time.ZoneOffset;
+
 @Component
 public class TenantMapper {
 
@@ -16,7 +18,7 @@ public class TenantMapper {
                 tenant.getDatabaseHost(),
                 tenant.getDatabasePort(),
                 tenant.getDatabaseName(),
-                tenant.getCreatedAt()
+                tenant.getCreatedAt() == null ? null : tenant.getCreatedAt().toInstant(ZoneOffset.UTC)
         );
     }
 }

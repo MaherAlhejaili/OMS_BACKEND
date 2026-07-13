@@ -10,16 +10,16 @@ import java.util.Optional;
 
 public interface SaleItemRepository extends JpaRepository<SaleItem, Integer> {
 
-    @Query("SELECT si FROM SaleItem si WHERE si.sale.id = :saleId")
+    @Query("SELECT si FROM SaleItem si WHERE si.saleId = :saleId")
     List<SaleItem> findBySaleId(@Param("saleId") Integer saleId);
 
-    @Query("SELECT si FROM SaleItem si WHERE si.sale.id = :saleId AND si.productCode = :productCode")
+    @Query("SELECT si FROM SaleItem si WHERE si.saleId = :saleId AND si.productCode = :productCode")
     Optional<SaleItem> findBySaleIdAndProductCode(
             @Param("saleId") Integer saleId,
             @Param("productCode") String productCode
     );
 
-    @Query("SELECT si FROM SaleItem si WHERE si.sale.id = :saleId AND si.productCode IN :productCodes")
+    @Query("SELECT si FROM SaleItem si WHERE si.saleId = :saleId AND si.productCode IN :productCodes")
     List<SaleItem> findBySaleIdAndProductCodeIn(
             @Param("saleId") Integer saleId,
             @Param("productCodes") List<String> productCodes

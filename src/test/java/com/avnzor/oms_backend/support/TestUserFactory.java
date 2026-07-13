@@ -13,7 +13,7 @@ public final class TestUserFactory {
 
     public static WarehouseWorker logisticWorker() {
         WarehouseWorker worker = new WarehouseWorker();
-        worker.setId(1);
+        worker.setId(1L);
         worker.setUsername("logistic.user");
         worker.setPassword("password");
         worker.setName("Logistic User");
@@ -24,7 +24,7 @@ public final class TestUserFactory {
 
     public static WarehouseWorker warehouseWorker() {
         WarehouseWorker worker = new WarehouseWorker();
-        worker.setId(2);
+        worker.setId(2L);
         worker.setUsername("warehouse.user");
         worker.setPassword("password");
         worker.setName("Warehouse User");
