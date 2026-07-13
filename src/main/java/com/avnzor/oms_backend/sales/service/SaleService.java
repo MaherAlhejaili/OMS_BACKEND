@@ -32,6 +32,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.HashSet;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -158,14 +160,14 @@ public class SaleService {
 
         saleRepository.save(sale);
 
-        return Map.of(
-                "message", "Sale status updated successfully",
-                "id", sale.getId(),
-                "sale_status", sale.getSaleStatus(),
-                "payment_status", sale.getPaymentStatus(),
-                "courier_order_status", sale.getCourierOrderStatus(),
-                "job_type", sale.getJobType()
-        );
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("message", "Sale status updated successfully");
+        response.put("id", sale.getId());
+        response.put("sale_status", sale.getSaleStatus());
+        response.put("payment_status", sale.getPaymentStatus());
+        response.put("courier_order_status", sale.getCourierOrderStatus());
+        response.put("job_type", sale.getJobType());
+        return response;
     }
 
     @Transactional(transactionManager = "tenantTransactionManager")
@@ -460,6 +462,7 @@ public class SaleService {
         history.setNewStatus(request.saleStatus());
         history.setChangedBy(request.changedBy());
         history.setNote(request.note());
+        history.setChangedAt(LocalDateTime.now());
         saleStatusHistoryRepository.save(history);
     }
 
