@@ -2,7 +2,7 @@ package com.avnzor.oms_backend.sales.dto;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
 import java.util.List;
@@ -23,7 +23,7 @@ public record EditSaleRequest(
     public record EditSaleItemRequest(
             @NotBlank String productCode,
             String productName,
-            @Positive Integer quantity
+            @NotNull @Positive Integer quantity
     ) {
     }
 

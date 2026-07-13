@@ -4,7 +4,9 @@ import com.avnzor.oms_backend.sales.dto.EditSaleRequest;
 import com.avnzor.oms_backend.sales.dto.PagedSaleListResponse;
 import com.avnzor.oms_backend.sales.dto.SaleDetailResponse;
 import com.avnzor.oms_backend.sales.dto.UpdateSaleStatusRequest;
+import com.avnzor.oms_backend.sales.dto.UpdateSaleStatusResponse;
 import com.avnzor.oms_backend.sales.dto.UpdateShelvingStatusRequest;
+import com.avnzor.oms_backend.sales.dto.UpdateShelvingStatusResponse;
 import com.avnzor.oms_backend.sales.service.SaleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -21,8 +23,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/sales")
@@ -65,10 +65,10 @@ public class SaleController {
         return ResponseEntity.ok(saleService.getSale(id, referenceNo, trackingId));
     }
 
-    @PatchMapping("/{id}/status")
+    @PatchMapping({"/{id}", "/{id}/status"})
     @PreAuthorize("@departmentAccess.isLogistic(authentication)")
-    @Operation(summary = "Update sale status")
-    public ResponseEntity<Map<String, Object>> updateSaleStatus(
+    @Operation(summary = "Update sale status", description = "Accepts PATCH on /{id} or /{id}/status")
+    public ResponseEntity<UpdateSaleStatusResponse> updateSaleStatus(
             @PathVariable Integer id,
             @Valid @RequestBody UpdateSaleStatusRequest request
     ) {
@@ -78,7 +78,7 @@ public class SaleController {
     @PatchMapping("/shelving-items/{shelvingItemId}/status")
     @PreAuthorize("@departmentAccess.isLogistic(authentication)")
     @Operation(summary = "Update shelving item status")
-    public ResponseEntity<Map<String, Object>> updateShelvingStatus(
+    public ResponseEntity<UpdateShelvingStatusResponse> updateShelvingStatus(
             @PathVariable Integer shelvingItemId,
             @Valid @RequestBody UpdateShelvingStatusRequest request
     ) {

@@ -1,4 +1,7 @@
 app:
+  auth:
+    allow-legacy-plaintext-password: true
+
   datasource:
     platform:
       url: jdbc:mysql://${DATABASE_HOST:127.0.0.1}:3306/${PLATFORM_DATABASE_NAME:oms}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC

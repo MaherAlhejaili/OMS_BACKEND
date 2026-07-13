@@ -5,6 +5,7 @@ import com.avnzor.oms_backend.auth.repository.WarehouseWorkerRepository;
 import com.avnzor.oms_backend.tenants.bootstrap.TenantBootstrapContext;
 import com.avnzor.oms_backend.tenants.bootstrap.TenantBootstrapContributor;
 import com.avnzor.oms_backend.tenants.context.TenantContextHolder;
+import com.avnzor.oms_backend.tenants.entity.PlatformUser;
 import com.avnzor.oms_backend.tenants.entity.Tenant;
 import com.avnzor.oms_backend.tenants.entity.TenantStatus;
 import org.springframework.boot.ApplicationRunner;
@@ -31,6 +32,8 @@ public class TestMultiTenancyConfig {
     }
 
     private void seedPlatformTenant(TenantBootstrapContext context, Environment environment) {
+        seedPlatformAdmin(context);
+
         String slug = environment.getProperty("test.tenant.slug", "test-tenant");
         if (context.tenantRepository().existsBySlug(slug)) {
             return;
@@ -58,6 +61,20 @@ public class TestMultiTenancyConfig {
         tenant.setDatabaseUsername(username);
         tenant.setDatabasePasswordEncrypted(context.credentialEncryptor().encrypt(password));
         context.tenantRepository().save(tenant);
+    }
+
+    private void seedPlatformAdmin(TenantBootstrapContext context) {
+        if (context.platformUserRepository().findByUsername("platform.admin").isPresent()) {
+            return;
+        }
+
+        PlatformUser admin = new PlatformUser();
+        admin.setUsername("platform.admin");
+        admin.setName("Platform Administrator");
+        admin.setRole("PLATFORM_ADMIN");
+        admin.setPassword(context.passwordEncoder().encode("admin123"));
+        admin.setActive(true);
+        context.platformUserRepository().save(admin);
     }
 
     private void seedTenantUsers(WarehouseWorkerRepository warehouseWorkerRepository) {

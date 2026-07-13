@@ -4,6 +4,9 @@ spring:
       mode: never
 
 app:
+  auth:
+    allow-legacy-plaintext-password: true
+
   datasource:
     platform:
       driver-class-name: com.mysql.cj.jdbc.Driver

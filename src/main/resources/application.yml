@@ -46,6 +46,9 @@ springdoc:
     tags-sorter: alpha
 
 app:
+  auth:
+    allow-legacy-plaintext-password: false
+
   datasource:
     platform:
       driver-class-name: com.mysql.cj.jdbc.Driver

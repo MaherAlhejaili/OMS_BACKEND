@@ -4,7 +4,6 @@ import com.avnzor.oms_backend.tenants.dto.CreateTenantRequest;
 import com.avnzor.oms_backend.tenants.dto.PlatformLoginRequest;
 import com.avnzor.oms_backend.tenants.dto.PlatformLoginResponse;
 import com.avnzor.oms_backend.tenants.dto.TenantResponse;
-import com.avnzor.oms_backend.tenants.mapper.TenantMapper;
 import com.avnzor.oms_backend.tenants.service.PlatformAuthService;
 import com.avnzor.oms_backend.tenants.service.TenantProvisioningService;
 import com.avnzor.oms_backend.tenants.service.TenantService;
@@ -32,7 +31,6 @@ public class TenantController {
     private final PlatformAuthService platformAuthService;
     private final TenantProvisioningService tenantProvisioningService;
     private final TenantService tenantService;
-    private final TenantMapper tenantMapper;
 
     @PostMapping("/auth/login")
     @Operation(summary = "Platform admin login")
@@ -52,9 +50,6 @@ public class TenantController {
     @PreAuthorize("hasRole('PLATFORM_ADMIN')")
     @Operation(summary = "List all tenants")
     public ResponseEntity<List<TenantResponse>> listTenants() {
-        List<TenantResponse> tenants = tenantService.listTenants().stream()
-                .map(tenantMapper::toResponse)
-                .toList();
-        return ResponseEntity.ok(tenants);
+        return ResponseEntity.ok(tenantService.listTenantResponses());
     }
 }

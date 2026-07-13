@@ -9,6 +9,8 @@ import com.avnzor.oms_backend.sales.dto.PagedSaleListResponse;
 import com.avnzor.oms_backend.sales.dto.SaleDetailResponse;
 import com.avnzor.oms_backend.sales.dto.SaleSummaryResponse;
 import com.avnzor.oms_backend.sales.dto.UpdateSaleStatusRequest;
+import com.avnzor.oms_backend.sales.dto.UpdateSaleStatusResponse;
+import com.avnzor.oms_backend.sales.dto.UpdateShelvingStatusResponse;
 import com.avnzor.oms_backend.sales.entity.Sale;
 import com.avnzor.oms_backend.sales.entity.SaleItem;
 import com.avnzor.oms_backend.sales.entity.SalesJob;
@@ -22,8 +24,8 @@ import com.avnzor.oms_backend.sales.support.SaleBatchSupport;
 import com.avnzor.oms_backend.sales.support.SaleQuerySupport;
 import com.avnzor.oms_backend.sales.support.SaleRelatedDataSupport;
 import com.avnzor.oms_backend.sales.support.SaleStockSupport;
-import com.avnzor.oms_backend.shipping.entity.ShipmentCreationLog;
 import com.avnzor.oms_backend.sales.validation.SaleStatus;
+import com.avnzor.oms_backend.sales.mapper.SaleMapper;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.LinkedHashMap;
+import com.avnzor.oms_backend.shipping.entity.ShipmentCreationLog;
 import java.util.HashSet;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -57,6 +59,7 @@ public class SaleService {
     private final SaleStockSupport saleStockSupport;
     private final SaleBatchSupport saleBatchSupport;
     private final SaleRelatedDataSupport saleRelatedDataSupport;
+    private final SaleMapper saleMapper;
     private final JdbcTemplate jdbcTemplate;
 
     @Transactional(readOnly = true, transactionManager = "tenantTransactionManager")
@@ -135,7 +138,7 @@ public class SaleService {
     }
 
     @Transactional(transactionManager = "tenantTransactionManager")
-    public Map<String, Object> updateSaleStatus(Integer id, UpdateSaleStatusRequest request) {
+    public UpdateSaleStatusResponse updateSaleStatus(Integer id, UpdateSaleStatusRequest request) {
         Sale sale = saleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Sale with ID " + id + " not found"));
 
@@ -159,19 +162,11 @@ public class SaleService {
         }
 
         saleRepository.save(sale);
-
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("message", "Sale status updated successfully");
-        response.put("id", sale.getId());
-        response.put("sale_status", sale.getSaleStatus());
-        response.put("payment_status", sale.getPaymentStatus());
-        response.put("courier_order_status", sale.getCourierOrderStatus());
-        response.put("job_type", sale.getJobType());
-        return response;
+        return saleMapper.toStatusUpdateResponse(sale);
     }
 
     @Transactional(transactionManager = "tenantTransactionManager")
-    public Map<String, Object> updateShelvingStatus(Integer shelvingItemId, String status) {
+    public UpdateShelvingStatusResponse updateShelvingStatus(Integer shelvingItemId, String status) {
         int updated = jdbcTemplate.update(
                 "UPDATE sma_purchase_order_shelving_items SET status = ? WHERE id = ?",
                 status,
@@ -180,7 +175,7 @@ public class SaleService {
         if (updated == 0) {
             throw new ResourceNotFoundException("Shelving item with ID " + shelvingItemId + " not found");
         }
-        return Map.of("success", true, "id", shelvingItemId, "status", status);
+        return saleMapper.toShelvingStatusResponse(shelvingItemId, status);
     }
 
     @Transactional(transactionManager = "tenantTransactionManager")

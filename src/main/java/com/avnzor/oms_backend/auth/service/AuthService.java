@@ -1,5 +1,6 @@
 package com.avnzor.oms_backend.auth.service;
 
+import com.avnzor.oms_backend.auth.config.AuthProperties;
 import com.avnzor.oms_backend.auth.dto.AuthenticatedUserResponse;
 import com.avnzor.oms_backend.auth.dto.LoginRequest;
 import com.avnzor.oms_backend.auth.dto.LoginResponse;
@@ -22,6 +23,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final TenantResolver tenantResolver;
+    private final AuthProperties authProperties;
 
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
@@ -57,7 +59,11 @@ public class AuthService {
             return passwordEncoder.matches(rawPassword, storedPassword);
         }
 
-        return storedPassword.equals(rawPassword);
+        if (authProperties.allowLegacyPlaintextPassword()) {
+            return storedPassword.equals(rawPassword);
+        }
+
+        return false;
     }
 
     private AuthenticatedUserResponse toUserResponse(WarehouseWorker worker, Long tenantId, String tenantSlug) {

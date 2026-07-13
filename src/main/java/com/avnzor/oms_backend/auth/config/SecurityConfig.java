@@ -1,6 +1,8 @@
 package com.avnzor.oms_backend.auth.config;
 
 import com.avnzor.oms_backend.audit.filter.AuditLoggingFilter;
+import com.avnzor.oms_backend.auth.config.AuthProperties;
+import com.avnzor.oms_backend.auth.config.JwtProperties;
 import com.avnzor.oms_backend.auth.filter.JwtAuthenticationFilter;
 import com.avnzor.oms_backend.auth.security.SecurityProblemSupport;
 import com.avnzor.oms_backend.tenants.filter.TenantContextFilter;
@@ -22,7 +24,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-@EnableConfigurationProperties(JwtProperties.class)
+@EnableConfigurationProperties({JwtProperties.class, AuthProperties.class})
 public class SecurityConfig {
 
     @Bean

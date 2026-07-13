@@ -1,10 +1,12 @@
 package com.avnzor.oms_backend.tenants.service;
 
 import com.avnzor.oms_backend.tenants.context.TenantContext;
+import com.avnzor.oms_backend.tenants.dto.TenantResponse;
 import com.avnzor.oms_backend.tenants.entity.Tenant;
 import com.avnzor.oms_backend.tenants.entity.TenantStatus;
 import com.avnzor.oms_backend.tenants.exception.TenantDisabledException;
 import com.avnzor.oms_backend.tenants.exception.TenantNotFoundException;
+import com.avnzor.oms_backend.tenants.mapper.TenantMapper;
 import com.avnzor.oms_backend.tenants.repository.TenantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +21,7 @@ import java.util.List;
 public class TenantService {
 
     private final TenantRepository tenantRepository;
+    private final TenantMapper tenantMapper;
 
     @Transactional(value = "platformTransactionManager", readOnly = true)
     public Tenant resolveActiveTenant(String tenantSlug) {
@@ -42,6 +45,11 @@ public class TenantService {
     @Transactional(value = "platformTransactionManager", readOnly = true)
     public List<Tenant> listTenants() {
         return tenantRepository.findAll();
+    }
+
+    @Transactional(value = "platformTransactionManager", readOnly = true)
+    public List<TenantResponse> listTenantResponses() {
+        return tenantMapper.toResponseList(tenantRepository.findAll());
     }
 
     public TenantContext toContext(Tenant tenant) {
