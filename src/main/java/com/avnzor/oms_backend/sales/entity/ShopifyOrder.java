@@ -2,8 +2,6 @@ package com.avnzor.oms_backend.sales.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
@@ -18,23 +16,23 @@ import org.hibernate.type.SqlTypes;
 @Setter
 public class ShopifyOrder {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id", unique = true, nullable = false, insertable = false, updatable = false)
     private Integer id;
 
-    @Column(name = "shopify_order_id")
+    @Id
+    @Column(name = "shopify_order_id", nullable = false)
     private Long shopifyOrderId;
 
-    @Column(name = "order_number", length = 50)
+    @Column(name = "order_number", nullable = false, length = 50)
     private String orderNumber;
 
-    @Column(name = "payload")
+    @Column(name = "payload", nullable = false)
     @JdbcTypeCode(SqlTypes.LONGVARCHAR)
     private String payload;
 
     @Column(name = "wms_status", length = 20)
     private String wmsStatus;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
     private LocalDateTime createdAt;
 }
