@@ -3,12 +3,10 @@ package com.avnzor.oms_backend.tenants.datasource;
 import com.avnzor.oms_backend.tenants.encryption.CredentialEncryptor;
 import com.avnzor.oms_backend.tenants.entity.Tenant;
 import com.avnzor.oms_backend.tenants.entity.TenantStatus;
-import com.avnzor.oms_backend.tenants.flyway.TenantFlywayService;
 import com.avnzor.oms_backend.tenants.repository.TenantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import javax.sql.DataSource;
 import java.util.List;
 
 @Slf4j
@@ -17,7 +15,6 @@ public class TenantRegistry {
 
     private final TenantRepository tenantRepository;
     private final DataSourceManager dataSourceManager;
-    private final TenantFlywayService tenantFlywayService;
     private final CredentialEncryptor credentialEncryptor;
 
     public void initializeActiveTenants() {
@@ -30,8 +27,7 @@ public class TenantRegistry {
     }
 
     public void registerTenant(Tenant tenant) {
-        DataSource dataSource = dataSourceManager.getOrCreate(tenant);
-        tenantFlywayService.migrateTenantDatabase(tenant, dataSource);
+        dataSourceManager.getOrCreate(tenant);
         log.info("Tenant registered slug={} database={}", tenant.getSlug(), tenant.getDatabaseName());
     }
 

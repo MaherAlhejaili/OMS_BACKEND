@@ -9,7 +9,7 @@ import java.util.Optional;
 
 public interface SalesJobRepository extends JpaRepository<SalesJob, Integer> {
 
-    Optional<SalesJob> findFirstByReferenceNo(Integer referenceNo);
+    Optional<SalesJob> findFirstByReferenceNo(String referenceNo);
 
-    List<SalesJob> findByReferenceNoIn(Collection<Integer> referenceNos);
+    List<SalesJob> findByReferenceNoIn(Collection<String> referenceNos);
 }

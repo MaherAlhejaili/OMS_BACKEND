@@ -8,7 +8,6 @@ import com.avnzor.oms_backend.tenants.datasource.TenantRegistry;
 import com.avnzor.oms_backend.tenants.encryption.CredentialEncryptor;
 import com.avnzor.oms_backend.tenants.entity.PlatformUser;
 import com.avnzor.oms_backend.tenants.entity.Tenant;
-import com.avnzor.oms_backend.tenants.flyway.TenantFlywayService;
 import com.avnzor.oms_backend.tenants.repository.PlatformUserRepository;
 import com.avnzor.oms_backend.tenants.repository.TenantRepository;
 import com.zaxxer.hikari.HikariConfig;
@@ -60,7 +59,6 @@ public class PlatformJpaConfig {
     }
 
     @Bean
-    @org.springframework.context.annotation.DependsOn("platformFlywayInitializer")
     LocalContainerEntityManagerFactoryBean platformEntityManagerFactory(
             EntityManagerFactoryBuilder builder,
             @Qualifier("platformDataSource") DataSource platformDataSource
@@ -90,7 +88,6 @@ public class PlatformJpaConfig {
             TenantRepository tenantRepository,
             PlatformUserRepository platformUserRepository,
             DataSourceManager dataSourceManager,
-            TenantFlywayService tenantFlywayService,
             CredentialEncryptor credentialEncryptor,
             PasswordEncoder passwordEncoder,
             Environment environment,
@@ -122,7 +119,6 @@ public class PlatformJpaConfig {
         TenantRegistry registry = new TenantRegistry(
                 tenantRepository,
                 dataSourceManager,
-                tenantFlywayService,
                 credentialEncryptor
         );
         registry.initializeActiveTenants();

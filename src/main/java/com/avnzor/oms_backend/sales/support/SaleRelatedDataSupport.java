@@ -106,12 +106,18 @@ public class SaleRelatedDataSupport {
         if (saleIds.isEmpty()) {
             return Map.of();
         }
-        return salesJobRepository.findByReferenceNoIn(saleIds).stream()
-                .collect(Collectors.toMap(SalesJob::getReferenceNo, job -> job, (left, right) -> left));
+        return salesJobRepository.findByReferenceNoIn(
+                        saleIds.stream().map(String::valueOf).toList()
+                ).stream()
+                .collect(Collectors.toMap(
+                        job -> Integer.valueOf(job.getReferenceNo()),
+                        job -> job,
+                        (left, right) -> left
+                ));
     }
 
     public Optional<SalesJob> findJobForSale(Integer saleId) {
-        return salesJobRepository.findFirstByReferenceNo(saleId);
+        return salesJobRepository.findFirstByReferenceNo(String.valueOf(saleId));
     }
 
     public SaleSummaryResponse.SaleJobResponse toJobResponse(SalesJob job) {
