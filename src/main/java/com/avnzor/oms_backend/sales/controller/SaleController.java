@@ -5,7 +5,6 @@ import com.avnzor.oms_backend.sales.dto.PagedSaleListResponse;
 import com.avnzor.oms_backend.sales.dto.SaleDetailResponse;
 import com.avnzor.oms_backend.sales.dto.UpdateSaleStatusRequest;
 import com.avnzor.oms_backend.sales.dto.UpdateShelvingStatusRequest;
-import com.avnzor.oms_backend.sales.dto.SaleDetailResponse;
 import com.avnzor.oms_backend.sales.service.SaleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;

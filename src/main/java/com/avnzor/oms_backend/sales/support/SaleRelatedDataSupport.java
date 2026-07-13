@@ -15,13 +15,14 @@ import com.avnzor.oms_backend.sales.entity.ShopifyOrder;
 import com.avnzor.oms_backend.sales.repository.SalesJobRepository;
 import com.avnzor.oms_backend.sales.repository.ShopifyOrderRepository;
 import com.avnzor.oms_backend.shipping.entity.ShipmentCreationLog;
+import com.avnzor.oms_backend.shipping.entity.ShipmentItem;
 import com.avnzor.oms_backend.shipping.repository.ShipmentCreationLogRepository;
+import com.avnzor.oms_backend.shipping.repository.ShipmentItemRepository;
 import com.avnzor.oms_backend.suppliers.entity.SupplierInventory;
 import com.avnzor.oms_backend.suppliers.entity.SupplierOrder;
 import com.avnzor.oms_backend.suppliers.repository.SupplierInventoryRepository;
 import com.avnzor.oms_backend.suppliers.repository.SupplierOrderRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -47,7 +48,32 @@ public class SaleRelatedDataSupport {
     private final SupplierOrderRepository supplierOrderRepository;
     private final EmployeeRepository employeeRepository;
     private final ShipmentCreationLogRepository shipmentCreationLogRepository;
-    private final JdbcTemplate jdbcTemplate;
+    private final ShipmentItemRepository shipmentItemRepository;
+
+    public Map<Integer, Company> loadCustomersByIds(Collection<Integer> customerIds) {
+        if (customerIds.isEmpty()) {
+            return Map.of();
+        }
+        return companyRepository.findByIdIn(customerIds).stream()
+                .collect(Collectors.toMap(Company::getId, company -> company, (left, right) -> left));
+    }
+
+    public Map<Integer, Address> loadAddressesByIds(Collection<Integer> addressIds) {
+        if (addressIds.isEmpty()) {
+            return Map.of();
+        }
+        return addressRepository.findByIdIn(addressIds).stream()
+                .collect(Collectors.toMap(Address::getId, address -> address, (left, right) -> left));
+    }
+
+    public Map<Integer, String> loadEmployeeNamesByIds(Collection<Integer> employeeIds) {
+        if (employeeIds.isEmpty()) {
+            return Map.of();
+        }
+        return employeeRepository.findByIdIn(employeeIds).stream()
+                .filter(employee -> employee.getName() != null)
+                .collect(Collectors.toMap(Employee::getId, Employee::getName, (left, right) -> left));
+    }
 
     public Optional<Company> findCustomer(Sale sale) {
         if (sale.getCustomerId() == null) {
@@ -92,9 +118,46 @@ public class SaleRelatedDataSupport {
     }
 
     public Map<Integer, String> loadShopifySaleIds(List<Sale> sales) {
+        return loadShopifySaleIdsBatch(sales);
+    }
+
+    public Map<Integer, String> loadShopifySaleIdsBatch(List<Sale> sales) {
+        Map<Integer, String> referenceBySaleId = new HashMap<>();
+        Set<String> orderNumbers = new HashSet<>();
+        for (Sale sale : sales) {
+            if (sale.getReferenceNo() == null || sale.getReferenceNo().isBlank()) {
+                continue;
+            }
+            String reference = sale.getReferenceNo().trim();
+            String withoutHash = reference.replaceFirst("^#", "").trim();
+            referenceBySaleId.put(sale.getId(), reference);
+            orderNumbers.add(reference);
+            if (!withoutHash.equals(reference)) {
+                orderNumbers.add(withoutHash);
+            }
+        }
+        if (orderNumbers.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, String> shopifyIdByOrderNumber = shopifyOrderRepository.findByOrderNumberIn(orderNumbers).stream()
+                .collect(Collectors.toMap(
+                        ShopifyOrder::getOrderNumber,
+                        order -> String.valueOf(order.getShopifyOrderId()),
+                        (left, right) -> left
+                ));
+
         Map<Integer, String> result = new HashMap<>();
         for (Sale sale : sales) {
-            String shopifySaleId = resolveShopifySaleId(sale);
+            String reference = referenceBySaleId.get(sale.getId());
+            if (reference == null) {
+                continue;
+            }
+            String withoutHash = reference.replaceFirst("^#", "").trim();
+            String shopifySaleId = shopifyIdByOrderNumber.get(reference);
+            if (shopifySaleId == null) {
+                shopifySaleId = shopifyIdByOrderNumber.get(withoutHash);
+            }
             if (shopifySaleId != null) {
                 result.put(sale.getId(), shopifySaleId);
             }
@@ -121,10 +184,19 @@ public class SaleRelatedDataSupport {
     }
 
     public SaleSummaryResponse.SaleJobResponse toJobResponse(SalesJob job) {
+        return toJobResponse(job, Map.of());
+    }
+
+    public SaleSummaryResponse.SaleJobResponse toJobResponse(SalesJob job, Map<Integer, String> employeeNamesById) {
         if (job == null) {
             return null;
         }
-        String employeeName = resolveEmployeeName(job.getAssignedTo());
+        String employeeName = job.getAssignedTo() == null
+                ? null
+                : employeeNamesById.get(job.getAssignedTo());
+        if (employeeName == null && job.getAssignedTo() != null) {
+            employeeName = resolveEmployeeName(job.getAssignedTo());
+        }
         return new SaleSummaryResponse.SaleJobResponse(
                 job.getId(),
                 job.getAssignedTo(),
@@ -194,22 +266,9 @@ public class SaleRelatedDataSupport {
 
     public List<ShipmentItemRow> loadShipmentItems(Integer saleId) {
         try {
-            return jdbcTemplate.query(
-                    """
-                            SELECT id, item_id, product_code, qty, tracking_id, carrier
-                            FROM sma_shipment_items
-                            WHERE order_id = ?
-                            """,
-                    (rs, rowNum) -> new ShipmentItemRow(
-                            rs.getInt("id"),
-                            rs.getInt("item_id"),
-                            rs.getString("product_code"),
-                            rs.getBigDecimal("qty"),
-                            rs.getString("tracking_id"),
-                            rs.getString("carrier")
-                    ),
-                    saleId
-            );
+            return shipmentItemRepository.findByOrderId(saleId).stream()
+                    .map(this::toShipmentItemRow)
+                    .toList();
         } catch (Exception ex) {
             return List.of();
         }
@@ -222,35 +281,32 @@ public class SaleRelatedDataSupport {
             return Map.of();
         }
 
-        String placeholders = saleIds.stream().map(id -> "?").collect(Collectors.joining(","));
         Map<Integer, List<SaleSummaryResponse.SaleShipmentSummaryResponse>> result = new HashMap<>();
 
         try {
-            List<Map<String, Object>> rows = jdbcTemplate.queryForList(
-                    "SELECT order_id, tracking_id, carrier FROM sma_shipment_items WHERE order_id IN (" + placeholders + ")",
-                    saleIds.toArray()
-            );
+            List<ShipmentItem> shipmentItems = shipmentItemRepository.findByOrderIdIn(saleIds);
+            Map<String, String> statusByTracking = loadTrackingStatuses(shipmentItems);
 
-            Map<String, String> statusByTracking = loadTrackingStatusesFromRows(rows);
-
-            for (Map<String, Object> row : rows) {
-                Integer saleId = ((Number) row.get("order_id")).intValue();
-                String trackingId = row.get("tracking_id") == null ? null : String.valueOf(row.get("tracking_id"));
+            for (ShipmentItem item : shipmentItems) {
+                String trackingId = item.getTrackingId();
                 if (trackingId == null || trackingId.isBlank()) {
                     continue;
                 }
 
                 List<SaleSummaryResponse.SaleShipmentSummaryResponse> shipments =
-                        result.computeIfAbsent(saleId, key -> new ArrayList<>());
+                        result.computeIfAbsent(item.getOrderId(), key -> new ArrayList<>());
 
                 boolean exists = shipments.stream().anyMatch(shipment -> trackingId.equals(shipment.trackingId()));
                 if (exists) {
                     continue;
                 }
 
-                String carrier = row.get("carrier") == null ? null : String.valueOf(row.get("carrier"));
                 String rawStatus = statusByTracking.getOrDefault(trackingId, "created");
-                shipments.add(new SaleSummaryResponse.SaleShipmentSummaryResponse(trackingId, carrier, rawStatus));
+                shipments.add(new SaleSummaryResponse.SaleShipmentSummaryResponse(
+                        trackingId,
+                        item.getCarrier(),
+                        rawStatus
+                ));
             }
         } catch (Exception ignored) {
             return Map.of();
@@ -260,11 +316,14 @@ public class SaleRelatedDataSupport {
     }
 
     public String resolveShippingPhone(Sale sale, Optional<Company> customer) {
+        return resolveShippingPhone(sale, customer, findAddress(sale));
+    }
+
+    public String resolveShippingPhone(Sale sale, Optional<Company> customer, Optional<Address> address) {
         if (sale.getShippingPhone() != null && !sale.getShippingPhone().isBlank()) {
             return sale.getShippingPhone();
         }
 
-        Optional<Address> address = findAddress(sale);
         if (address.map(Address::getPhone).filter(phone -> !phone.isBlank()).isPresent()) {
             return address.get().getPhone();
         }
@@ -294,29 +353,37 @@ public class SaleRelatedDataSupport {
         return customer.map(Company::getEmail).orElse(null);
     }
 
-    private Map<String, String> loadTrackingStatusesFromRows(List<Map<String, Object>> rows) {
-        Set<String> trackingIds = rows.stream()
-                .map(row -> row.get("tracking_id"))
-                .filter(value -> value != null)
-                .map(String::valueOf)
-                .filter(id -> !id.isBlank())
+    private Map<String, String> loadTrackingStatuses(List<ShipmentItem> shipmentItems) {
+        Set<String> trackingIds = shipmentItems.stream()
+                .map(ShipmentItem::getTrackingId)
+                .filter(id -> id != null && !id.isBlank())
                 .collect(Collectors.toSet());
         if (trackingIds.isEmpty()) {
             return Map.of();
         }
 
-        String placeholders = trackingIds.stream().map(id -> "?").collect(Collectors.joining(","));
         Map<String, String> statuses = new HashMap<>();
         try {
-            jdbcTemplate.query(
-                    "SELECT tracking_number, status FROM sma_shipment_creations WHERE tracking_number IN (" + placeholders + ")",
-                    (rs, rowNum) -> statuses.put(rs.getString("tracking_number"), rs.getString("status")),
-                    trackingIds.toArray()
-            );
+            for (ShipmentCreationLog creation : shipmentCreationLogRepository.findByTrackingNumberIn(trackingIds)) {
+                if (creation.getTrackingNumber() != null) {
+                    statuses.put(creation.getTrackingNumber(), creation.getStatus());
+                }
+            }
         } catch (Exception ignored) {
             return Map.of();
         }
         return statuses;
+    }
+
+    private ShipmentItemRow toShipmentItemRow(ShipmentItem item) {
+        return new ShipmentItemRow(
+                item.getId(),
+                item.getItemId(),
+                item.getProductCode(),
+                item.getQty(),
+                item.getTrackingId(),
+                item.getCarrier()
+        );
     }
 
     public record ShipmentItemRow(

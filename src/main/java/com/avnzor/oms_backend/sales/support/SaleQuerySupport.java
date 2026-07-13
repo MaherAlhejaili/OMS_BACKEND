@@ -130,10 +130,11 @@ public class SaleQuerySupport {
         }
         MapSqlParameterSource params = new MapSqlParameterSource("saleIds", saleIds);
         String sql = """
-                SELECT s.id AS sale_id,
-                       (SELECT COUNT(*) FROM sma_sale_items si WHERE si.sale_id = s.id) AS items_count
-                FROM sma_sales s
-                WHERE s.id IN (:saleIds)
+                SELECT si.sale_id,
+                       COUNT(*) AS items_count
+                FROM sma_sale_items si
+                WHERE si.sale_id IN (:saleIds)
+                GROUP BY si.sale_id
                 """;
         Map<Integer, Map<String, Object>> result = new java.util.HashMap<>();
         namedJdbcTemplate.query(sql, params, rs -> {

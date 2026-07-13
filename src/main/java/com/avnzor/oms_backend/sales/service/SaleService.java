@@ -2,6 +2,7 @@ package com.avnzor.oms_backend.sales.service;
 
 import com.avnzor.oms_backend.common.exception.BadRequestException;
 import com.avnzor.oms_backend.common.exception.ResourceNotFoundException;
+import com.avnzor.oms_backend.customers.entity.Address;
 import com.avnzor.oms_backend.customers.entity.Company;
 import com.avnzor.oms_backend.sales.dto.EditSaleRequest;
 import com.avnzor.oms_backend.sales.dto.PagedSaleListResponse;
@@ -31,12 +32,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.HashSet;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -77,6 +80,27 @@ public class SaleService {
         Map<Integer, List<SaleSummaryResponse.SaleShipmentSummaryResponse>> shipmentsBySaleId =
                 saleRelatedDataSupport.loadShipmentSummariesBySaleIds(saleIds);
 
+        Set<Integer> customerIds = new HashSet<>();
+        Set<Integer> addressIds = new HashSet<>();
+        for (Sale sale : sales) {
+            if (sale.getCustomerId() != null) {
+                customerIds.add(sale.getCustomerId());
+            }
+            if (sale.getAddressId() != null) {
+                addressIds.add(sale.getAddressId());
+            }
+        }
+        Map<Integer, Company> customersById = saleRelatedDataSupport.loadCustomersByIds(customerIds);
+        Map<Integer, Address> addressesById = saleRelatedDataSupport.loadAddressesByIds(addressIds);
+
+        Set<Integer> employeeIds = new HashSet<>();
+        for (SalesJob job : jobsBySaleId.values()) {
+            if (job.getAssignedTo() != null) {
+                employeeIds.add(job.getAssignedTo());
+            }
+        }
+        Map<Integer, String> employeeNamesById = saleRelatedDataSupport.loadEmployeeNamesByIds(employeeIds);
+
         List<SaleSummaryResponse> data = sales.stream()
                 .map(sale -> toSummary(
                         sale,
@@ -84,7 +108,10 @@ public class SaleService {
                         shopifySaleIds.get(sale.getId()),
                         jobsBySaleId.get(sale.getId()),
                         supplierOrdersBySaleId.get(sale.getId()),
-                        shipmentsBySaleId.getOrDefault(sale.getId(), List.of())
+                        shipmentsBySaleId.getOrDefault(sale.getId(), List.of()),
+                        customersById,
+                        addressesById,
+                        employeeNamesById
                 ))
                 .toList();
 
@@ -204,6 +231,9 @@ public class SaleService {
         Map<String, BigDecimal> pickedQtyMap = saleStockSupport.getPickedQtyMap(sale.getId());
         Map<String, String> productImages = saleRelatedDataSupport.loadProductImages(productCodes);
         Map<String, Integer> supplierIdsByCode = saleRelatedDataSupport.loadSupplierIdsByProductCodes(productCodes);
+        Map<String, List<SaleBatchSupport.SaleBatchView>> batchesByProductCode = includeBatches
+                ? saleBatchSupport.loadBatchesForProducts(productCodes)
+                : Map.of();
 
         List<SaleDetailResponse.SaleItemDetailResponse> items = saleItems.stream()
                 .map(item -> mapItemDetail(
@@ -214,6 +244,7 @@ public class SaleService {
                         pickedQtyMap,
                         productImages,
                         supplierIdsByCode,
+                        batchesByProductCode,
                         includeBatches
                 ))
                 .sorted(Comparator.comparing(this::extractSortKey))
@@ -281,6 +312,7 @@ public class SaleService {
             Map<String, BigDecimal> pickedQtyMap,
             Map<String, String> productImages,
             Map<String, Integer> supplierIdsByCode,
+            Map<String, List<SaleBatchSupport.SaleBatchView>> batchesByProductCode,
             boolean includeBatches
     ) {
         String normalized = ProductCodeNormalizer.normalize(item.getProductCode());
@@ -296,7 +328,9 @@ public class SaleService {
 
         List<SaleDetailResponse.SaleItemBatchResponse> batches = List.of();
         if (includeBatches && item.getProductCode() != null) {
-            batches = saleBatchSupport.loadBatchesForProduct(item.getProductCode()).stream()
+            List<SaleBatchSupport.SaleBatchView> productBatches =
+                    batchesByProductCode.getOrDefault(normalized, List.of());
+            batches = productBatches.stream()
                     .map(batch -> new SaleDetailResponse.SaleItemBatchResponse(
                             batch.batchNo(),
                             batch.expiryDate(),
@@ -373,15 +407,23 @@ public class SaleService {
             String shopifySaleId,
             SalesJob job,
             SupplierOrder supplierOrder,
-            List<SaleSummaryResponse.SaleShipmentSummaryResponse> shipments
+            List<SaleSummaryResponse.SaleShipmentSummaryResponse> shipments,
+            Map<Integer, Company> customersById,
+            Map<Integer, Address> addressesById,
+            Map<Integer, String> employeeNamesById
     ) {
-        Optional<Company> customer = saleRelatedDataSupport.findCustomer(sale);
+        Optional<Company> customer = sale.getCustomerId() == null
+                ? Optional.empty()
+                : Optional.ofNullable(customersById.get(sale.getCustomerId()));
+        Optional<Address> address = sale.getAddressId() == null
+                ? Optional.empty()
+                : Optional.ofNullable(addressesById.get(sale.getAddressId()));
         int totalItems = sale.getTotalItems() == null ? 0 : sale.getTotalItems();
         if (enrichment != null && enrichment.get("items_count") instanceof Number count) {
             totalItems = count.intValue();
         }
 
-        String phone = saleRelatedDataSupport.resolveShippingPhone(sale, customer);
+        String phone = saleRelatedDataSupport.resolveShippingPhone(sale, customer, address);
         String customerEmail = saleRelatedDataSupport.resolveCustomerEmail(sale, customer);
         return new SaleSummaryResponse(
                 sale.getId(),
@@ -402,7 +444,7 @@ public class SaleService {
                 sale.getSourceName(),
                 sale.getShopifyTags(),
                 totalItems,
-                saleRelatedDataSupport.toJobResponse(job),
+                saleRelatedDataSupport.toJobResponse(job, employeeNamesById),
                 shipments
         );
     }

@@ -20,7 +20,7 @@ public class SalesJob {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "reference_no", length = 55)
+    @Column(name = "reference_no", nullable = false, length = 55)
     private String referenceNo;
 
     @Column(name = "assigned_to")
@@ -32,10 +32,10 @@ public class SalesJob {
     @Column(name = "updated_by")
     private Integer updatedBy;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
     private LocalDateTime updatedAt;
 
     @Column(name = "return_id", length = 100)

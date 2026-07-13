@@ -22,13 +22,13 @@ public class ShipmentCreationLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "order_id")
+    @Column(name = "order_id", nullable = false)
     private Integer orderId;
 
-    @Column(name = "provider", length = 255)
+    @Column(name = "provider", nullable = false, length = 255)
     private String provider;
 
-    @Column(name = "number_of_pieces")
+    @Column(name = "number_of_pieces", nullable = false)
     private Integer numberOfPieces;
 
     @Column(name = "tracking_number", length = 255)
@@ -48,6 +48,6 @@ public class ShipmentCreationLog {
     @JdbcTypeCode(SqlTypes.LONGVARCHAR)
     private String rawResponse;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
     private LocalDateTime createdAt;
 }
